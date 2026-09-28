@@ -163,7 +163,7 @@ audio { width: 100%; height: 36px; margin: 4px 0 8px; }
 .diff .wild, .legend .wild { color: var(--wild); font-style: italic; }
 .facts { color: var(--ink-2); font-size: 12.5px; margin: 10px 0 0; }
 .risks { display: grid; gap: 6px; }
-.risk-row { display: grid; grid-template-columns: 170px 1fr 86px; align-items: center; gap: 10px; font-size: 12.5px; }
+.risk-row { display: grid; grid-template-columns: 230px 1fr 86px; align-items: center; gap: 10px; font-size: 12.5px; }
 .risk-track { position: relative; height: 10px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 5px; }
 .risk-fill { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 5px; }
 .risk-thr { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); }

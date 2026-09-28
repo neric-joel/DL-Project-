@@ -346,3 +346,42 @@ The proposal's optional second model is run once the main pipeline was finished:
 `configs/large-v3-turbo.yaml`. Everything else is identical: units, splits, decoding settings, scoring,
 labels, policies (fitted on turbo's own Eka calibration outputs), operating points and tests. Its
 results are **exploratory**. The confirmatory family (H1–H4) is whisper-small's.
+
+### Amendment 6: 2026-09-28, *after* the first full results (post hoc)
+
+While choosing an example transcript for the demo, we found that Whisper's normaliser turns the
+interjection "Oh" into the digit **0**. PriMock57 transcribers write "Ohh"/"Ooh", so a harmless
+interjection counted as a substitution *and* a false number alarm, in 5.2% of PriMock57 windows but 0.4%
+of Eka clips. That biased the dose/number results against the target domain. A systematic list of the
+most frequent substitutions (both domains) then showed more words written two ways: unit
+abbreviations spelled out ("dl"/"deciliter", "l"/"liter", "mm"/"millimeter", "cm", "g"/"grams",
+"g/dL"/"g per dL"), "e.g."/"for example", "Ltd"/"limited", "mum"/"mom". Also, the normaliser deletes "mm"
+as a filler, so "5 mm" lost its unit.
+
+All were fixed symmetrically. Interjections (oh, ooh, ah, er, erm, eh, huh, uh-huh, mm-hmm) are
+dropped unless "oh" means zero ("oh seven", "point oh five"). The unit and spelling pairs are mapped
+to one form. Pairs of *different* words ("yeah"/"yes", "the"/"a") were left alone. Everything was then
+rescored and re-evaluated. Because the change came after test results existed, the numbers from
+before and after it are both given below. The pre-change results are in the git history (commit
+`9894725`).
+
+| | before | after |
+|---|---:|---:|
+| WER, Eka test / PriMock57 windows / turns | 14.1% / 11.8% / 11.6% | 13.7% / 11.6% / 11.4% |
+| Share with WER > 10%, Eka test / windows / turns | 55.5% / 53.0% / 37.8% | 54.8% / 51.7% / 36.9% |
+| Units with a dose/negation error, windows | 28.8% | 24.4% |
+| Number false-alarm rate, Eka test / windows / turns | 7.1% / 16.1% / 17.5% | 7.0% / 5.6% / 7.0% |
+| H1: calibration-in-the-large of P3 on windows (p, Holm) | −0.079 (0.003) | −0.074 (0.003) |
+| H2: extra share of errors auto-accepted (p, Holm) | 0.190 (0.003) | 0.200 (0.004) |
+| H3a: ΔECE, P4 − P3 (p, Holm) | −0.028 (0.26) | −0.022 (0.41) |
+| **H3b**: Δ\|accepted error − 0.20\|, empirical rule (p, Holm) | −0.049 (**0.20**) | −0.101 (**0.006**) |
+| H3c: Δ\|accepted error − 0.20\|, plug-in rule (p, Holm) | −0.044 (0.26) | −0.029 (0.41) |
+| H4: Δ word-level ECE (p, Holm) | 0.035 (0.003) | 0.034 (0.003) |
+
+The verdicts on H1, H2, H4 (supported) and H3a, H3c (not supported) do not depend on the change.
+**H3b does:** it is not supported before the correction and supported after it. Its statistic hangs on
+a threshold picked from 194 recalibration windows, and a small change in their labels moves the cut.
+We therefore do **not** count H3b as a confirmatory finding. We report it as unstable, which is itself
+a deployment lesson about tuning thresholds on a few consultations. The large change in the number
+false-alarm rate on PriMock57 (16% → 6%) shows that the earlier gap between domains was an artifact of
+"oh" → "0", not an ASR behaviour.

@@ -54,6 +54,21 @@ def test_spelling_variants_are_merged_on_both_sides():
     assert tokens("O.K. the B.P. is fine") == ["okay", "the", "bp", "is", "fine"]
 
 
+def test_interjections_do_not_become_numbers():
+    assert tokens("Oh, okay.") == tokens("Ohh okay") == ["okay"]
+    assert tokens("Er, yes") == ["yes"] and tokens("Uh-huh") == []
+    assert tokens("Oh seven") == ["07"] and tokens("point oh five") == [".05"]  # "oh" meaning zero is kept
+    assert tokens("Ohio ahead") == ["ohio", "ahead"]
+
+
+def test_same_word_two_spellings():
+    assert tokens("Hb 12 g/dL") == tokens("Hb 12 grams per deciliter") == ["hb", "12", "g", "per", "dl"]
+    assert tokens("5 mm") == tokens("5 millimeters") == ["5", "mm"]
+    assert tokens("e.g. fever") == tokens("for example fever")
+    assert tokens("Cipla Ltd.") == tokens("Cipla Limited") and tokens("my mum") == tokens("my mom")
+    assert tokens("hmm okay") == ["okay"] and tokens("120 mmHg") == ["120", "mmhg"]
+
+
 def test_repetition_loops_are_not_collapsed():
     loop = ["thank", "you"] * 6
     kept, _ = collapse_repeats(loop)

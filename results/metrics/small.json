@@ -11,20 +11,20 @@
           "P3": {
             "C": 0.1,
             "coef_standardised": {
-              "mean_logprob": -0.3751,
-              "min_seg_logprob": -0.2471,
-              "word_p_mean": -0.8105,
-              "word_p_min": -0.0906,
-              "word_p_q10": -0.6128,
-              "word_frac_low": -0.1369,
-              "nsp_max": 0.0467,
-              "cr_max": 0.2881,
-              "rep3": 0.1876,
-              "fallback": -0.1481,
-              "log_words": 0.4319,
-              "log_duration": 0.0989,
-              "words_per_s": -0.0531,
-              "n_segments": -0.2363,
+              "mean_logprob": -0.3532,
+              "min_seg_logprob": -0.2754,
+              "word_p_mean": -0.8392,
+              "word_p_min": -0.1083,
+              "word_p_q10": -0.5702,
+              "word_frac_low": -0.1263,
+              "nsp_max": 0.0613,
+              "cr_max": 0.261,
+              "rep3": 0.026,
+              "fallback": -0.1541,
+              "log_words": 0.4223,
+              "log_duration": 0.1047,
+              "words_per_s": -0.0351,
+              "n_segments": -0.2153,
               "empty_hyp": 0.0014
             }
           },
@@ -34,8 +34,8 @@
           "P1-retuned": {},
           "P2-retuned": {},
           "P4": {
-            "a": 0.8627347803635107,
-            "b": 0.4252828396725688
+            "a": 0.8549667614536096,
+            "b": 0.43919319684975866
           },
           "P4-refit": {
             "C": 0.01
@@ -48,20 +48,20 @@
           "P3": {
             "C": 0.1,
             "coef_standardised": {
-              "mean_logprob": -0.3751,
-              "min_seg_logprob": -0.2471,
-              "word_p_mean": -0.8105,
-              "word_p_min": -0.0906,
-              "word_p_q10": -0.6128,
-              "word_frac_low": -0.1369,
-              "nsp_max": 0.0467,
-              "cr_max": 0.2881,
-              "rep3": 0.1876,
-              "fallback": -0.1481,
-              "log_words": 0.4319,
-              "log_duration": 0.0989,
-              "words_per_s": -0.0531,
-              "n_segments": -0.2363,
+              "mean_logprob": -0.3532,
+              "min_seg_logprob": -0.2754,
+              "word_p_mean": -0.8392,
+              "word_p_min": -0.1083,
+              "word_p_q10": -0.5702,
+              "word_frac_low": -0.1263,
+              "nsp_max": 0.0613,
+              "cr_max": 0.261,
+              "rep3": 0.026,
+              "fallback": -0.1541,
+              "log_words": 0.4223,
+              "log_duration": 0.1047,
+              "words_per_s": -0.0351,
+              "n_segments": -0.2153,
               "empty_hyp": 0.0014
             }
           },
@@ -71,8 +71,8 @@
           "P1-retuned": {},
           "P2-retuned": {},
           "P4": {
-            "a": 0.5077644441618111,
-            "b": -0.6872112076417896
+            "a": 0.4900941827192696,
+            "b": -0.736500432218198
           },
           "P4-refit": {
             "C": 0.1
@@ -89,21 +89,21 @@
           "P3": {
             "C": 0.1,
             "coef_standardised": {
-              "mean_logprob": -0.358,
-              "min_seg_logprob": -0.329,
-              "word_p_mean": -0.8672,
-              "word_p_min": -0.217,
-              "word_p_q10": -0.3707,
-              "word_frac_low": -0.1216,
-              "nsp_max": 0.0124,
-              "cr_max": 0.3914,
-              "rep3": 0.0685,
-              "fallback": -0.1567,
-              "log_words": 0.5676,
-              "log_duration": 0.4224,
-              "words_per_s": 0.3215,
-              "n_segments": 0.2034,
-              "empty_hyp": 0.0039
+              "mean_logprob": -0.3562,
+              "min_seg_logprob": -0.3415,
+              "word_p_mean": -0.8809,
+              "word_p_min": -0.2084,
+              "word_p_q10": -0.3731,
+              "word_frac_low": -0.1227,
+              "nsp_max": -0.0014,
+              "cr_max": 0.3716,
+              "rep3": -0.0787,
+              "fallback": -0.1606,
+              "log_words": 0.5504,
+              "log_duration": 0.4314,
+              "words_per_s": 0.3316,
+              "n_segments": 0.2379,
+              "empty_hyp": 0.0043
             }
           },
           "P3-conf": {
@@ -112,8 +112,8 @@
           "P1-retuned": {},
           "P2-retuned": {},
           "P4": {
-            "a": 0.8911587466737345,
-            "b": 0.47663859878033865
+            "a": 0.7942639161902303,
+            "b": 0.7724676375238608
           },
           "P4-refit": {
             "C": 0.1
@@ -126,21 +126,21 @@
           "P3": {
             "C": 0.1,
             "coef_standardised": {
-              "mean_logprob": -0.358,
-              "min_seg_logprob": -0.329,
-              "word_p_mean": -0.8672,
-              "word_p_min": -0.217,
-              "word_p_q10": -0.3707,
-              "word_frac_low": -0.1216,
-              "nsp_max": 0.0124,
-              "cr_max": 0.3914,
-              "rep3": 0.0685,
-              "fallback": -0.1567,
-              "log_words": 0.5676,
-              "log_duration": 0.4224,
-              "words_per_s": 0.3215,
-              "n_segments": 0.2034,
-              "empty_hyp": 0.0039
+              "mean_logprob": -0.3562,
+              "min_seg_logprob": -0.3415,
+              "word_p_mean": -0.8809,
+              "word_p_min": -0.2084,
+              "word_p_q10": -0.3731,
+              "word_frac_low": -0.1227,
+              "nsp_max": -0.0014,
+              "cr_max": 0.3716,
+              "rep3": -0.0787,
+              "fallback": -0.1606,
+              "log_words": 0.5504,
+              "log_duration": 0.4314,
+              "words_per_s": 0.3316,
+              "n_segments": 0.2379,
+              "empty_hyp": 0.0043
             }
           },
           "P3-conf": {
@@ -149,8 +149,8 @@
           "P1-retuned": {},
           "P2-retuned": {},
           "P4": {
-            "a": 0.8168496191332081,
-            "b": -0.6119875208236611
+            "a": 0.7966486513256149,
+            "b": -0.6287983065614773
           },
           "P4-refit": {
             "C": 0.1
@@ -167,21 +167,21 @@
           "P3": {
             "C": 0.1,
             "coef_standardised": {
-              "mean_logprob": -0.3531,
-              "min_seg_logprob": -0.3032,
-              "word_p_mean": -0.7482,
-              "word_p_min": -0.0197,
-              "word_p_q10": -0.4061,
-              "word_frac_low": 0.021,
-              "nsp_max": 0.0021,
-              "cr_max": -0.2523,
-              "rep3": 0.4742,
-              "fallback": -0.0421,
-              "log_words": -0.0566,
-              "log_duration": -0.2048,
-              "words_per_s": 0.0727,
-              "n_segments": -0.2398,
-              "empty_hyp": 0.0063
+              "mean_logprob": -0.3707,
+              "min_seg_logprob": -0.3083,
+              "word_p_mean": -0.7451,
+              "word_p_min": 0.0682,
+              "word_p_q10": -0.4992,
+              "word_frac_low": 0.0231,
+              "nsp_max": -0.0413,
+              "cr_max": -0.2237,
+              "rep3": 0.3999,
+              "fallback": -0.0453,
+              "log_words": -0.1265,
+              "log_duration": -0.2547,
+              "words_per_s": 0.0871,
+              "n_segments": -0.1843,
+              "empty_hyp": 0.014
             }
           },
           "P3-conf": {
@@ -190,8 +190,8 @@
           "P1-retuned": {},
           "P2-retuned": {},
           "P4": {
-            "a": 1.212413679792746,
-            "b": 1.0200967533198104
+            "a": 1.3521480359603917,
+            "b": 1.5848120090731637
           },
           "P4-refit": {
             "C": 0.1
@@ -204,21 +204,21 @@
           "P3": {
             "C": 0.1,
             "coef_standardised": {
-              "mean_logprob": -0.3531,
-              "min_seg_logprob": -0.3032,
-              "word_p_mean": -0.7482,
-              "word_p_min": -0.0197,
-              "word_p_q10": -0.4061,
-              "word_frac_low": 0.021,
-              "nsp_max": 0.0021,
-              "cr_max": -0.2523,
-              "rep3": 0.4742,
-              "fallback": -0.0421,
-              "log_words": -0.0566,
-              "log_duration": -0.2048,
-              "words_per_s": 0.0727,
-              "n_segments": -0.2398,
-              "empty_hyp": 0.0063
+              "mean_logprob": -0.3707,
+              "min_seg_logprob": -0.3083,
+              "word_p_mean": -0.7451,
+              "word_p_min": 0.0682,
+              "word_p_q10": -0.4992,
+              "word_frac_low": 0.0231,
+              "nsp_max": -0.0413,
+              "cr_max": -0.2237,
+              "rep3": 0.3999,
+              "fallback": -0.0453,
+              "log_words": -0.1265,
+              "log_duration": -0.2547,
+              "words_per_s": 0.0871,
+              "n_segments": -0.1843,
+              "empty_hyp": 0.014
             }
           },
           "P3-conf": {
@@ -227,8 +227,8 @@
           "P1-retuned": {},
           "P2-retuned": {},
           "P4": {
-            "a": 0.5408405593616024,
-            "b": -1.6849538156099642
+            "a": 0.5275098436909195,
+            "b": -1.7384745870120408
           },
           "P4-refit": {
             "C": 0.1
@@ -245,21 +245,21 @@
           "P3": {
             "C": 0.1,
             "coef_standardised": {
-              "mean_logprob": -0.0342,
-              "min_seg_logprob": -0.2563,
-              "word_p_mean": -0.5346,
-              "word_p_min": -0.225,
-              "word_p_q10": -0.1479,
-              "word_frac_low": 0.0218,
-              "nsp_max": 0.0496,
-              "cr_max": -0.0231,
-              "rep3": 0.3651,
-              "fallback": -0.1486,
-              "log_words": 0.5208,
-              "log_duration": 0.4022,
-              "words_per_s": 0.167,
-              "n_segments": -0.0868,
-              "empty_hyp": 0.12
+              "mean_logprob": -0.0333,
+              "min_seg_logprob": -0.2721,
+              "word_p_mean": -0.4995,
+              "word_p_min": -0.221,
+              "word_p_q10": -0.1196,
+              "word_frac_low": 0.0226,
+              "nsp_max": 0.065,
+              "cr_max": -0.0121,
+              "rep3": 0.3342,
+              "fallback": -0.1341,
+              "log_words": 0.5405,
+              "log_duration": 0.4028,
+              "words_per_s": 0.186,
+              "n_segments": -0.1564,
+              "empty_hyp": 0.1181
             }
           },
           "P3-conf": {
@@ -268,8 +268,8 @@
           "P1-retuned": {},
           "P2-retuned": {},
           "P4": {
-            "a": 0.6464016564053827,
-            "b": 0.2556447001216875
+            "a": 0.5060080127895353,
+            "b": 0.048544753974770226
           },
           "P4-refit": {
             "C": 0.01
@@ -282,21 +282,21 @@
           "P3": {
             "C": 0.1,
             "coef_standardised": {
-              "mean_logprob": -0.0342,
-              "min_seg_logprob": -0.2563,
-              "word_p_mean": -0.5346,
-              "word_p_min": -0.225,
-              "word_p_q10": -0.1479,
-              "word_frac_low": 0.0218,
-              "nsp_max": 0.0496,
-              "cr_max": -0.0231,
-              "rep3": 0.3651,
-              "fallback": -0.1486,
-              "log_words": 0.5208,
-              "log_duration": 0.4022,
-              "words_per_s": 0.167,
-              "n_segments": -0.0868,
-              "empty_hyp": 0.12
+              "mean_logprob": -0.0333,
+              "min_seg_logprob": -0.2721,
+              "word_p_mean": -0.4995,
+              "word_p_min": -0.221,
+              "word_p_q10": -0.1196,
+              "word_frac_low": 0.0226,
+              "nsp_max": 0.065,
+              "cr_max": -0.0121,
+              "rep3": 0.3342,
+              "fallback": -0.1341,
+              "log_words": 0.5405,
+              "log_duration": 0.4028,
+              "words_per_s": 0.186,
+              "n_segments": -0.1564,
+              "empty_hyp": 0.1181
             }
           },
           "P3-conf": {
@@ -305,8 +305,8 @@
           "P1-retuned": {},
           "P2-retuned": {},
           "P4": {
-            "a": 0.7617496042302652,
-            "b": -0.38053026435746223
+            "a": 0.7940832166430016,
+            "b": -0.4990529591952263
           },
           "P4-refit": {
             "C": 0.1
@@ -323,20 +323,20 @@
           "P3": {
             "C": 0.1,
             "coef_standardised": {
-              "mean_logprob": -0.3751,
-              "min_seg_logprob": -0.2471,
-              "word_p_mean": -0.8105,
-              "word_p_min": -0.0906,
-              "word_p_q10": -0.6128,
-              "word_frac_low": -0.1369,
-              "nsp_max": 0.0467,
-              "cr_max": 0.2881,
-              "rep3": 0.1876,
-              "fallback": -0.1481,
-              "log_words": 0.4319,
-              "log_duration": 0.0989,
-              "words_per_s": -0.0531,
-              "n_segments": -0.2363,
+              "mean_logprob": -0.3532,
+              "min_seg_logprob": -0.2754,
+              "word_p_mean": -0.8392,
+              "word_p_min": -0.1083,
+              "word_p_q10": -0.5702,
+              "word_frac_low": -0.1263,
+              "nsp_max": 0.0613,
+              "cr_max": 0.261,
+              "rep3": 0.026,
+              "fallback": -0.1541,
+              "log_words": 0.4223,
+              "log_duration": 0.1047,
+              "words_per_s": -0.0351,
+              "n_segments": -0.2153,
               "empty_hyp": 0.0014
             }
           },
@@ -346,8 +346,8 @@
           "P1-retuned": {},
           "P2-retuned": {},
           "P4": {
-            "a": 0.9120966918060739,
-            "b": 0.47157234782229446
+            "a": 0.887897580705649,
+            "b": 0.47824816365104106
           },
           "P4-refit": {
             "C": 0.1
@@ -360,20 +360,20 @@
           "P3": {
             "C": 0.1,
             "coef_standardised": {
-              "mean_logprob": -0.3751,
-              "min_seg_logprob": -0.2471,
-              "word_p_mean": -0.8105,
-              "word_p_min": -0.0906,
-              "word_p_q10": -0.6128,
-              "word_frac_low": -0.1369,
-              "nsp_max": 0.0467,
-              "cr_max": 0.2881,
-              "rep3": 0.1876,
-              "fallback": -0.1481,
-              "log_words": 0.4319,
-              "log_duration": 0.0989,
-              "words_per_s": -0.0531,
-              "n_segments": -0.2363,
+              "mean_logprob": -0.3532,
+              "min_seg_logprob": -0.2754,
+              "word_p_mean": -0.8392,
+              "word_p_min": -0.1083,
+              "word_p_q10": -0.5702,
+              "word_frac_low": -0.1263,
+              "nsp_max": 0.0613,
+              "cr_max": 0.261,
+              "rep3": 0.026,
+              "fallback": -0.1541,
+              "log_words": 0.4223,
+              "log_duration": 0.1047,
+              "words_per_s": -0.0351,
+              "n_segments": -0.2153,
               "empty_hyp": 0.0014
             }
           },
@@ -383,8 +383,8 @@
           "P1-retuned": {},
           "P2-retuned": {},
           "P4": {
-            "a": 0.5376171553906499,
-            "b": -0.6428107378944201
+            "a": 0.5275363607021021,
+            "b": -0.6859066854256102
           },
           "P4-refit": {
             "C": 0.1

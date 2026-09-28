@@ -8,6 +8,8 @@ import pandas as pd
 from asrshift.paths import RESULTS_DIR
 
 SETS = {"eka_test": "Eka test", "pm_turn_test": "PriMock57 turns (test)", "pm_window_test": "PriMock57 windows (test)"}
+# see docs/PROTOCOL.md, Amendment 6
+VERDICT_NOTES = {"H3b": " (unstable\\*)"}
 
 
 def _p(x, d=1):
@@ -27,7 +29,7 @@ def _f(x, d=3):
 
 def _table(rows: list[list], head: list[str]) -> str:
     out = ["| " + " | ".join(head) + " |", "|" + "|".join("---" if i == 0 else "---:" for i in range(len(head))) + "|"]
-    out += ["| " + " | ".join(str(c) for c in r) + " |" for r in rows]
+    out += ["| " + " | ".join(str(c).replace("|", "\\|") for c in r) + " |" for r in rows]
     return "\n".join(out)
 
 
@@ -57,8 +59,12 @@ def build(model: str = "small") -> str:
     s += ["## Confirmatory hypotheses (Holm-adjusted, one-sided)", ""]
     rows = [[r["hypothesis"], r["statement"], _f(r["estimate"]), f"[{_f(r['ci_lo'])}, {_f(r['ci_hi'])}]",
              _f(r["p_holm"], 4) if r["testable"] else "not testable",
-             "**supported**" if r["supported"] else "not supported"] for _, r in hyp.iterrows()]
+             ("**supported**" if r["supported"] else "not supported") + VERDICT_NOTES.get(r["hypothesis"], "")]
+            for _, r in hyp.iterrows()]
     s += [_table(rows, ["", "Statement", "Estimate", "95% CI", "p (Holm)", "Verdict"]), ""]
+    if any(h in set(hyp["hypothesis"]) for h in VERDICT_NOTES):
+        s += ["\\* H3b's verdict flips with the post-hoc scoring correction of Amendment 6 (p = 0.20 before, "
+              "0.006 after), so it is reported as unstable and not counted as a confirmatory finding.", ""]
 
     nb = e / "null_baseline.csv"
     if nb.exists():

@@ -186,7 +186,8 @@ def queue(eval_set: str, policy: str, point: str, show: str = "all", limit: int 
         df = df[df["decision"] == "review"]
     elif show == "accepted_critical":
         df = df[(df["decision"] == "accept") & (df["crit_err"] == 1)]
-    df = df.sort_values("risk", ascending=False) if show != "accepted_errors" else df.sort_values("risk")
+    # the review queue is riskiest-first; mistakes that slipped through are most-confident-first
+    df = df.sort_values("risk", ascending=show.startswith("accepted"))
     return {"total": int(len(df)), "rows": df.head(limit).round(4).to_dict("records")}
 
 

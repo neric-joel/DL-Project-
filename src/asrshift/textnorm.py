@@ -26,12 +26,29 @@ _TAG_NAME = re.compile(r"[<>/\s]")
 _ACRONYM = re.compile(r"\b((?:[A-Za-z]\.){2,})")
 _OK = re.compile(r"\b(?:ok|okey)\b", re.IGNORECASE)
 _ALRIGHT = re.compile(r"\balright\b", re.IGNORECASE)
+# Interjections carry no content. Whisper's normaliser drops "hmm"/"um" but turns "oh" into the digit
+# 0, while transcribers write "Ohh"/"Ooh", so "Oh" vs "Ohh" became a substitution plus a spurious
+# number error (Amendment 6). "oh" meaning zero ("oh seven", "point oh five") is kept.
+_NUMWORD = r"(?:\d|zero|one|two|three|four|five|six|seven|eight|nine)"
+_INTERJECTION = re.compile(
+    rf"\b(?:o+h+|o+h(?=h)|ooh+|oops|a+h+|aha|eh|er+m*|huh|uh-huh|mm-hmm)\b(?!\s+{_NUMWORD})(?<!point oh)",
+    re.IGNORECASE)
+
+
+# "5 mm": the normaliser deletes "mm" as a filler, so a unit after a number is spelled out first.
+_MM_UNIT = re.compile(r"(?<=\d)\s*mm\b(?!\s*hg)", re.IGNORECASE)
+# "g/dL" is read out as "g per dL"
+_UNIT_SLASH = re.compile(r"\b(mg|g|mcg|ug|ml|l|dl|kg|mmol|mm|cm|iu|u|ng)\s*/\s*(?=[a-z])", re.IGNORECASE)
 
 
 def _variants(text: str) -> str:
-    """Merge spellings that mean the same word. Applied to both sides, so it cannot hide an error."""
+    """Merge spellings that mean the same word and drop interjections. Applied to both sides, so it
+    cannot hide an error."""
+    text = _UNIT_SLASH.sub(r"\1 per ", text)
+    text = _MM_UNIT.sub(" millimeter", text)
     text = _ACRONYM.sub(lambda m: m.group(1).replace(".", ""), text)
     text = _OK.sub("okay", text)
+    text = _INTERJECTION.sub(" ", text)
     return _ALRIGHT.sub("all right", text)
 
 
@@ -49,6 +66,12 @@ _UNITS = {
     "microgram": "mcg", "micrograms": "mcg", "mcgs": "mcg",
     "milliliter": "ml", "milliliters": "ml", "millilitre": "ml", "millilitres": "ml", "mls": "ml",
     "kilogram": "kg", "kilograms": "kg", "kgs": "kg",
+    # Amendment 6: the same words written two ways, found after the first results
+    "deciliter": "dl", "deciliters": "dl", "decilitre": "dl", "decilitres": "dl",
+    "liter": "l", "liters": "l", "litre": "l", "litres": "l",
+    "millimeter": "mm", "millimeters": "mm", "millimetre": "mm", "millimetres": "mm",
+    "centimeter": "cm", "centimeters": "cm", "centimetre": "cm", "centimetres": "cm",
+    "gram": "g", "grams": "g", "limited": "ltd", "eg": "for example", "mum": "mom", "mums": "moms",
 }
 
 
