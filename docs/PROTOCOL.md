@@ -291,3 +291,18 @@ Inference on PriMock57 was running, but no PriMock57 transcript had been scored 
     (Amendment 1.7) is the one that answers the proposal's question about confident errors.
 14. **Privacy.** Some Eka speaker IDs are e-mail addresses. Only a hash of them is written to any
     output in the repository.
+
+### Amendment 3: 2026-09-28, still before any PriMock57 unit was scored (exploratory analysis)
+
+**Shared medical vocabulary.** The proposal's optional PriMock57 entity step ("a simple lexicon or
+entity recognition tool, and check a sample by hand") is implemented as follows. Every medical entity
+annotated in Eka is normalised; pure numbers and doses, and single words that are usually not clinical
+in conversation ("back", "rest", ...), are removed. The terms that also occur in PriMock57 reference
+transcripts form the lexicon (270 terms, 2,468 occurrences). The same greedy longest-match matcher is
+run on the references of *both* datasets. A term is correct if all its words are aligned as correct.
+This gives term accuracy on an identical vocabulary in both domains, with no brand names. The
+lexicon uses only human annotations and reference text, never ASR output or labels. It is committed
+(`results/terms/`), together with a random sample of 100 matches for a manual precision check by the
+team. A small local LLM (qwen3.5:2b through Ollama) was tried first as the entity tool and rejected,
+because on a test chunk it copied the prompt's examples and missed most findings. All term results are
+exploratory.
