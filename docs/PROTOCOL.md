@@ -74,6 +74,9 @@ recalibration windows falls outside 10–90%, in which case move to the nearest 
 that brings both inside; the move is recorded as an amendment. Only calibration and recalibration
 labels may be inspected for this.
 
+*Outcome:* base rates of 51.0% (Eka calibration) and 50.5% (PriMock57 recalibration windows), so the
+threshold stays at 0.10.
+
 ## Confidence features
 
 All computed from the decoder output, identically in both domains:
@@ -335,3 +338,11 @@ been computed.
    Added: dropping windows in which a wildcard absorbed more than three words.
 6. **Plug-in intervals** re-estimate the plug-in threshold in every bootstrap replicate, because it is
    computed from the evaluation stream itself.
+
+### Amendment 5: 2026-09-28, before any large-v3-turbo output existed
+
+The proposal's optional second model is run once the main pipeline was finished: **whisper-large-v3-turbo**
+(`dropbox-dash/faster-whisper-large-v3-turbo`, revision `0a363e91`, float16), configured in
+`configs/large-v3-turbo.yaml`. Everything else is identical: units, splits, decoding settings, scoring,
+labels, policies (fitted on turbo's own Eka calibration outputs), operating points and tests. Its
+results are **exploratory**. The confirmatory family (H1–H4) is whisper-small's.

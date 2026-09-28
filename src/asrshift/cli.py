@@ -28,7 +28,7 @@ def _infer(cfg, args):
         m = m[m["dataset"] == args.dataset]
     if args.subset:
         m = m[m["subset"].isin(args.subset)]
-    if args.model:
+    if args.model:  # ad-hoc model; for a reported run use a config file with a pinned revision
         cfg["asr"]["model"] = args.model
         cfg["asr"]["model_repo"] = args.model
         cfg["asr"]["model_revision"] = None

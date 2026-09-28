@@ -1,0 +1,9 @@
+# Exploratory second model (Amendment 5): identical protocol, only the ASR model changes.
+#   asrshift --config configs/large-v3-turbo.yaml infer | score | evaluate | figures | report
+extends: default.yaml
+
+asr:
+  model: large-v3-turbo
+  model_repo: dropbox-dash/faster-whisper-large-v3-turbo   # formerly mobiuslabsgmbh/faster-whisper-large-v3-turbo
+  model_revision: 0a363e9161cbc7ed1431c9597a8ceaf0c4f78fcf
+  compute_type: float16
