@@ -1,0 +1,3 @@
+# Transcript Review Console (app/): uvicorn app.server:app --port 8765
+fastapi==0.141.1
+uvicorn==0.54.0

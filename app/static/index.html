@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Transcript Review Console</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h2M7 8v8M11 5v14M15 9v6M19 7v10M21 12h0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <div>
+        <h1>Transcript Review Console</h1>
+        <p>Whisper-small · which transcripts can be accepted automatically, and which need a human?</p>
+      </div>
+    </div>
+    <div class="status" id="status" aria-live="polite"></div>
+  </header>
+
+  <section class="controls" aria-label="Scenario">
+    <div class="control">
+      <span class="control-label" id="lbl-eval">Audio the system sees</span>
+      <div class="seg" role="radiogroup" aria-labelledby="lbl-eval" id="seg-eval"></div>
+    </div>
+    <div class="control">
+      <span class="control-label" id="lbl-policy">Review policy</span>
+      <div class="seg" role="radiogroup" aria-labelledby="lbl-policy" id="seg-policy"></div>
+    </div>
+    <div class="control">
+      <span class="control-label" id="lbl-point">Operating point</span>
+      <div class="seg" role="radiogroup" aria-labelledby="lbl-point" id="seg-point"></div>
+    </div>
+  </section>
+
+  <section class="kpis" aria-label="Outcomes of this policy">
+    <article class="kpi" id="kpi-review">
+      <h2>Sent to human review</h2><div class="big" data-v>—</div><p class="sub" data-sub></p>
+    </article>
+    <article class="kpi" id="kpi-caught">
+      <h2>Erroneous transcripts caught</h2><div class="big" data-v>—</div><p class="sub" data-sub></p>
+    </article>
+    <article class="kpi" id="kpi-acc">
+      <h2>Auto-accepted but wrong</h2><div class="big" data-v>—</div><p class="sub" data-sub></p>
+    </article>
+    <article class="kpi" id="kpi-crit">
+      <h2>Auto-accepted with a dose or negation error</h2><div class="big" data-v>—</div><p class="sub" data-sub></p>
+    </article>
+  </section>
+
+  <main class="split">
+    <section class="queue" aria-label="Transcripts">
+      <div class="queue-head">
+        <h2>Transcripts, riskiest first</h2>
+        <div class="chips" role="radiogroup" aria-label="Filter" id="chips"></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">Risk</th><th scope="col">Decision</th><th scope="col">WER</th><th scope="col">Conf.</th><th scope="col">What Whisper wrote</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <p class="foot" id="queue-foot"></p>
+    </section>
+
+    <aside class="detail" id="detail" aria-live="polite">
+      <div class="empty">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <p>Select a transcript to hear the audio, see what Whisper got wrong, and how each policy scored it.</p>
+      </div>
+    </aside>
+  </main>
+
+  <template id="tpl-detail">
+    <div class="detail-head">
+      <div>
+        <p class="eyebrow" data-kind></p>
+        <h2 data-id></h2>
+      </div>
+      <span class="chip-decision" data-decision></span>
+    </div>
+    <audio controls preload="none" data-audio></audio>
+    <div class="actions">
+      <button class="btn primary" data-live type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
+        Run Whisper on this audio now
+      </button>
+      <span class="live-status" data-live-status></span>
+    </div>
+    <div class="live" data-live-out hidden></div>
+    <h3>Risk under each policy</h3>
+    <div class="risks" data-risks></div>
+    <h3>What Whisper wrote <span class="legend"><i class="lc lo"></i>low confidence <i class="lc hi"></i>high</span></h3>
+    <p class="words" data-words></p>
+    <h3>Scored against the human transcript
+      <span class="legend"><s class="del">deleted</s> <span class="sub-tok">substituted</span> <span class="ins">inserted</span> <span class="wild">unintelligible</span></span>
+    </h3>
+    <p class="diff" data-diff></p>
+    <p class="facts" data-facts></p>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
