@@ -363,7 +363,7 @@ dropped unless "oh" means zero ("oh seven", "point oh five"). The unit and spell
 to one form. Pairs of *different* words ("yeah"/"yes", "the"/"a") were left alone. Everything was then
 rescored and re-evaluated. Because the change came after test results existed, the numbers from
 before and after it are both given below. The pre-change results are in the git history (commit
-`9894725`).
+`9549ba9`, "Add whisper-small results").
 
 | | before | after |
 |---|---:|---:|
