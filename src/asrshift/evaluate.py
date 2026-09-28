@@ -57,6 +57,9 @@ def _extra(d: pd.DataFrame) -> dict:
     if d["dataset"].iloc[0] == "eka" and "n_ent" in d:
         out["n_ent"] = d["n_ent"].fillna(0).to_numpy(float)
         out["n_ent_correct"] = d["n_ent_correct"].fillna(0).to_numpy(float)
+    if "n_term" in d and d["n_term"].fillna(0).sum() > 0:
+        out["n_term"] = d["n_term"].fillna(0).to_numpy(float)
+        out["n_term_correct"] = d["n_term_correct"].fillna(0).to_numpy(float)
     return out
 
 
@@ -92,6 +95,10 @@ def asr_summary(sets: dict, n_boot: int, seed: int) -> pd.DataFrame:
         }
         if d["dataset"].iloc[0] == "eka":
             stats["entity_acc"] = _rate(col("n_ent_correct"), col("n_ent"))
+        if "n_term" in d and col("n_term").sum() > 0:
+            # exploratory: shared medical vocabulary (Eka-annotated terms that also occur in PriMock57)
+            stats["term_acc"] = _rate(col("n_term_correct"), col("n_term"))
+            row_terms = int(col("n_term").sum())
         row = {"set": name, "units": len(d), "groups": d["group_id"].nunique(), "hours": d["duration"].sum() / 3600,
                "ref_words": int(n_ref.sum()), "median_ref_words": float(np.median(n_ref)),
                "any_err_rate": float(d["any_err"].mean()), "severe_err_rate": float(d["severe_err"].mean()),
@@ -100,6 +107,8 @@ def asr_summary(sets: dict, n_boot: int, seed: int) -> pd.DataFrame:
                "n_numbers": int(col("n_num").sum()), "n_negations": int(col("n_neg").sum()),
                "mean_conf": float(d["conf"].mean()), "empty_hyp_rate": float(d["empty_hyp"].mean()),
                "wordlevel_disagreement": float((d["wl_wrong"] != d["sub"] + d["ins"]).mean())}
+        if "term_acc" in stats:
+            row["n_terms"] = row_terms
         all_ix = np.arange(len(d))
         for k, f in stats.items():
             row[k] = f(all_ix)

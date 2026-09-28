@@ -152,7 +152,7 @@ def operating_point(review: np.ndarray, y: np.ndarray, errors: np.ndarray, n_ref
         for k in ("sub", "del", "ins"):
             if k in extra:
                 out[f"accepted_{k}_rate"] = _ratio(extra[k], n_ref, acc)
-        for kind in ("num", "neg", "ent"):
+        for kind in ("num", "neg", "ent", "term"):
             if f"n_{kind}" in extra:
                 out[f"accepted_{kind}_err"] = 1.0 - _ratio(extra[f"n_{kind}_correct"], extra[f"n_{kind}"], acc)
         if "crit_err" in extra:

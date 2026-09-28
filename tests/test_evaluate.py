@@ -49,6 +49,7 @@ def synthetic_units(seed: int = 0) -> pd.DataFrame:
     df["any_err"] = (df["wer"] > 0).astype(int)
     df["severe_err"] = (df["wer"] > 0.30).astype(int)
     df["crit_err"] = ((df["n_crit_missed"] + df["n_crit_false"]) > 0).astype(int)
+    df["err_c3"] = df["err"]
     df["ent_err"] = np.where(df["n_ent"] > 0, (df["n_ent_correct"] < df["n_ent"]).astype(float), np.nan)
     return df
 

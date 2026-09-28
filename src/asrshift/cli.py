@@ -55,6 +55,19 @@ def _figures(cfg, args):
     plots.run(cfg, model=args.model)
 
 
+def _terms(cfg, args):
+    from asrshift import terms
+
+    lex = terms.build(seed=cfg["seed"])
+    print(f"{len(lex)} lexicon terms occur in PriMock57; lexicon and audit sample in {terms.TERMS_DIR}")
+
+
+def _report(cfg, args):
+    from asrshift import report
+
+    report.run(cfg, model=args.model)
+
+
 def _download(cfg, args):
     from asrshift import download
 
@@ -62,7 +75,7 @@ def _download(cfg, args):
 
 
 STEPS = {"download": _download, "prepare": _prepare, "infer": _infer, "score": _score,
-         "evaluate": _evaluate, "figures": _figures}
+         "evaluate": _evaluate, "figures": _figures, "report": _report, "terms": _terms}
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -81,7 +94,7 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--n-boot", type=int, default=None, help="evaluate: bootstrap replicates (default: config)")
     args = p.parse_args(argv)
     cfg = load_config(args.config)
-    steps = ["download", "prepare", "infer", "score", "evaluate", "figures"] if args.step == "all" else [args.step]
+    steps = ["download", "prepare", "infer", "score", "evaluate", "figures", "report"] if args.step == "all" else [args.step]
     for step in steps:
         print(f"== {step}", file=sys.stderr)
         STEPS[step](cfg, args)

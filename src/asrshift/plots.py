@@ -190,18 +190,27 @@ def fig_learning_curve(tables):
         return
     lc = pd.read_csv(p)
     fig, axes = plt.subplots(1, 2, figsize=(10.5, 4.2))
-    for ax, (m3, m4, ylab) in zip(axes, [("ece_P3", "ece_P4", "ECE on held-out consultations"),
-                                          ("acc_err_P3_0.20", "acc_err_P4_0.20", "Error rate among accepted (target 20%)")]):
-        g = lc.groupby("k")
-        for m, pol in ((m3, "P3"), (m4, "P4")):
-            q = g[m].quantile([0.25, 0.5, 0.75]).unstack()
-            lab, col, _ = POLICY[pol]
-            ax.fill_between(q.index, q[0.25], q[0.75], color=col, alpha=0.15, linewidth=0)
-            ax.plot(q.index, q[0.5], color=col, marker="o", label=lab)
-        if "acc_err" in m3:
-            ax.axhline(0.20, color=INK2, linestyle=":", linewidth=1.2)
-        ax.set_xlabel("Consultations used for recalibration")
-        ax.set_ylabel(ylab)
+    g = lc.groupby("k")
+    series = [
+        (axes[0], "ece_P3", "P3", "-"), (axes[0], "ece_P4", "P4", "-"), (axes[0], "ece_P4-int", "P4", "--"),
+        (axes[1], "plugin_acc_err_P3_0.20", "P3", "-"), (axes[1], "plugin_acc_err_P4_0.20", "P4", "-"),
+        (axes[1], "plugin_acc_err_P4-int_0.20", "P4", "--"),
+    ]
+    for ax, m, pol, ls in series:
+        if m not in lc:
+            continue
+        q = g[m].quantile([0.25, 0.5, 0.75]).unstack()
+        lab, col, _ = POLICY[pol]
+        if ls == "--":
+            lab = "P4 intercept-only (1 parameter)"
+        ax.fill_between(q.index, q[0.25], q[0.75], color=col, alpha=0.12, linewidth=0)
+        ax.plot(q.index, q[0.5], color=col, marker="o", linestyle=ls, label=lab)
+    axes[1].axhline(0.20, color=INK2, linestyle=":", linewidth=1.2)
+    axes[1].text(lc["k"].max(), 0.205, "target", color=INK2, fontsize=8.5, ha="right", va="bottom")
+    axes[0].set_ylabel("ECE on held-out consultations")
+    axes[1].set_ylabel("Error rate among accepted, plug-in rule at 20%")
+    for ax in axes:
+        ax.set_xlabel("Consultations used for recalibration (50 random draws each)")
         ax.set_xticks(sorted(lc["k"].unique()))
     axes[0].legend(fontsize=9)
     axes[0].set_title("How much target data does recalibration need?")
@@ -209,16 +218,17 @@ def fig_learning_curve(tables):
 
 
 def fig_word_reliability(tables):
-    wc = pd.read_csv(tables / "word_calibration.csv")
-    bins = wc[wc["bin_lo"].notna()]
-    fig, ax = plt.subplots(figsize=(5.6, 4.8))
+    bins_p, summ_p = tables / "word_reliability.csv", tables / "word_confidence.csv"
+    if not bins_p.exists():
+        return
+    bins, summ = pd.read_csv(bins_p), pd.read_csv(summ_p).set_index("set")
+    fig, ax = plt.subplots(figsize=(5.8, 4.8))
     ax.plot([0, 1], [0, 1], color=INK2, linestyle=":", linewidth=1.2)
     for key, (lab, col, mk) in DOMAIN.items():
         d = bins[(bins["set"] == key) & (bins["n"] >= 30)]
-        s = wc[(wc["set"] == key) & wc["bin_lo"].isna()]
-        e = f"  ECE {s['ece'].iloc[0]:.3f}" if len(s) else ""
-        ax.plot(d["mean_p_err"], d["frac_err"], color=col, marker=mk, label=lab.split(" (")[0] + e)
-    ax.set_xlabel("1 − Whisper word probability")
+        e = f"  ECE {summ.loc[key, 'word_ece']:.3f}" if key in summ.index else ""
+        ax.plot(d["mean_p"], d["frac_err"], color=col, marker=mk, label=lab.split(" (")[0] + e)
+    ax.set_xlabel("1 − Whisper word probability (predicted word error)")
     ax.set_ylabel("Observed word error rate")
     ax.set_title("Word-level confidence")
     ax.set_xlim(0, 1)
@@ -228,21 +238,69 @@ def fig_word_reliability(tables):
 
 
 def fig_feature_shift(tables):
-    fs = pd.read_csv(tables / "feature_shift.csv")
-    feats = fs[fs["set"] == "pm_window_test"].sort_values("shift_sd")["feature"].tolist()
-    fig, ax = plt.subplots(figsize=(6.8, 5.2))
-    ypos = {f: i for i, f in enumerate(feats)}
-    for key in ["eka_test", "pm_turn_test", "pm_window_test"]:
-        lab, col, mk = DOMAIN[key]
-        d = fs[fs["set"] == key]
-        ax.plot(d["shift_sd"], d["feature"].map(ypos), linestyle="none", marker=mk, color=col, label=lab.split(" (")[0])
+    p = tables / "err" / "feature_contributions.csv"
+    if not p.exists():
+        return
+    fc = pd.read_csv(p)
+    d = fc[fc["model"] == "P3"].copy()
+    d["abs"] = d["logit_shift_pm_window_test"].abs()
+    d = d.sort_values("abs")
+    fig, ax = plt.subplots(figsize=(7.2, 5.2))
+    y = np.arange(len(d))
+    ax.barh(y - 0.19, d["logit_shift_pm_window_test"], height=0.36, color=DOMAIN["pm_window_test"][1],
+            label="PriMock57 windows")
+    ax.barh(y + 0.19, d["logit_shift_pm_turn_test"], height=0.36, color=DOMAIN["pm_turn_test"][1],
+            label="PriMock57 turns")
     ax.axvline(0, color=INK2, linewidth=1)
-    ax.set_yticks(range(len(feats)))
-    ax.set_yticklabels(feats)
-    ax.set_xlabel("Mean shift from Eka calibration set (in its standard deviations)")
-    ax.set_title("Which confidence features move under shift")
-    ax.legend(fontsize=9, loc="lower right")
-    _save(fig, "fig7_feature_shift")
+    ax.set_yticks(y)
+    ax.set_yticklabels(d["feature"])
+    tot_w, tot_t = d["logit_shift_pm_window_test"].sum(), d["logit_shift_pm_turn_test"].sum()
+    ax.set_xlabel("Change in P3's mean log-odds of error vs Eka test, by feature\n(coefficient × shift of the feature's mean)")
+    ax.set_title("What moves the frozen model's risk under shift")
+    ax.legend(fontsize=9, loc="lower right", title=f"total: windows {tot_w:+.2f}, turns {tot_t:+.2f}", title_fontsize=8.5)
+    _save(fig, "fig7_feature_contributions")
+
+
+def fig_length_strata(tables):
+    p = tables / "err" / "length_strata.csv"
+    if not p.exists():
+        return
+    ls = pd.read_csv(p)
+    order = [b for b in ls["bin"].unique()]
+    fig, ax = plt.subplots(figsize=(8.2, 4.4))
+    offs = {"eka_test": -0.2, "pm_turn_test": 0.0, "pm_window_test": 0.2}
+    for key, (lab, col, mk) in DOMAIN.items():
+        d = ls[(ls["eval"] == key) & (ls["n"] >= 20)]
+        x = np.array([order.index(b) for b in d["bin"]]) + offs[key]
+        err = [d["P3_citl"] - d.get("P3_citl_lo", d["P3_citl"]), d.get("P3_citl_hi", d["P3_citl"]) - d["P3_citl"]]
+        ax.errorbar(x, d["P3_citl"], yerr=err, color=col, marker=mk, linestyle="none", capsize=3,
+                    label=lab.split(" (")[0])
+        for xi, (_, r) in zip(x, d.iterrows()):
+            ax.text(xi, r["P3_citl"], f"  n={int(r['n'])}", fontsize=7.5, color=INK2, va="center")
+    ax.axhline(0, color=INK2, linewidth=1)
+    ax.set_xticks(range(len(order)))
+    ax.set_xticklabels([f"{b} words" for b in order], fontsize=9)
+    ax.set_ylabel("P3: mean predicted − observed error rate\n(below 0 = overconfident)")
+    ax.set_title("Is the overconfidence just transcript length?")
+    ax.legend(fontsize=9)
+    _save(fig, "fig8_length_strata")
+
+
+def fig_null_baseline(tables):
+    p, h = tables / "err" / "null_baseline.csv", tables / "err" / "hypotheses.csv"
+    if not (p.exists() and h.exists()):
+        return
+    nb, hy = pd.read_csv(p), pd.read_csv(h).set_index("hypothesis")
+    fig, axes = plt.subplots(1, 2, figsize=(10.5, 3.8))
+    for ax, col_, hyp, title in ((axes[0], "citl_windows", "H1", "H1: P3 calibration-in-the-large on windows"),
+                                 (axes[1], "miss_windows_minus_eka", "H2", "H2: extra errors auto-accepted on windows")):
+        ax.hist(nb[col_], bins=20, color=GRID, edgecolor=INK2, linewidth=0.6, label="null: perfectly calibrated words")
+        if hyp in hy.index:
+            ax.axvline(hy.loc[hyp, "estimate"], color=POLICY["P3"][1], linewidth=2.5, label="observed")
+        ax.set_title(title, fontsize=10.5)
+        ax.set_ylabel("simulations")
+    axes[0].legend(fontsize=8.5)
+    _save(fig, "fig9_null_baseline")
 
 
 def fig_asr_overview(tables):
@@ -302,4 +360,6 @@ def run(cfg: dict | None = None, model: str | None = None):
     fig_learning_curve(tables)
     fig_word_reliability(tables)
     fig_feature_shift(tables)
+    fig_length_strata(tables)
+    fig_null_baseline(tables)
     print(f"figures written to {FIGURES_DIR}")

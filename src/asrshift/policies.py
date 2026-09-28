@@ -36,8 +36,22 @@ def _logloss(y, p):
     return float(-np.mean(y * np.log(p) + (1 - y) * np.log(1 - p)))
 
 
+class ConstantModel:
+    """Stand-in when a fitting set has one class only: predicts that set's error rate everywhere."""
+
+    chosen_C_ = None
+
+    def __init__(self, rate: float):
+        self.rate = float(np.clip(rate, EPS, 1 - EPS))
+
+    def predict_proba(self, X):
+        return np.column_stack([np.full(len(X), 1 - self.rate), np.full(len(X), self.rate)])
+
+
 def fit_logreg(X: np.ndarray, y: np.ndarray, groups: np.ndarray, seed: int, n_folds: int = 5):
     """Standardised L2 logistic regression; C chosen by grouped CV on log loss."""
+    if len(np.unique(y)) < 2:
+        return ConstantModel(float(np.mean(y)))
     n_folds = min(n_folds, len(np.unique(groups)))
     best_c, best_loss = C_GRID[0], np.inf
     if n_folds >= 2:
@@ -141,7 +155,7 @@ def build_policies(eka_cal: pd.DataFrame, pm_recal: pd.DataFrame | None, label: 
     def p3c(df):
         return conf_only.predict_proba(df[CONFIDENCE_FEATURES].to_numpy(float))[:, 1]
 
-    coef = dict(zip(FEATURES, full[-1].coef_[0].round(4).tolist()))
+    coef = dict(zip(FEATURES, full[-1].coef_[0].round(4).tolist())) if not isinstance(full, ConstantModel) else {}
     source = [
         Policy("P1", "Raw confidence", False, "eka", raw_risk),
         Policy("P2", "No-speech + repetition rules", False, "eka", rules_risk),
