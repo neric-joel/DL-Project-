@@ -157,7 +157,7 @@ asrshift report
 --compute-type int8` works but takes several hours.
 
 **3. Google Colab.** [notebooks/reproduce_colab.ipynb](notebooks/reproduce_colab.ipynb) runs route 1 in
-about five minutes, and route 2 on a free T4.
+about 2 minutes, and route 2 in about an hour on a free T4.
 
 **4. Docker (CPU).**
 
@@ -168,6 +168,12 @@ docker compose run --rm pipeline      # full pipeline on CPU (slow)
 
 **Tests:** `pytest` (unit tests plus a synthetic end-to-end run of the evaluation; tests marked `data`
 also check the real splits for leakage when the data is present).
+
+**How exact is it?** Route 1 reproduces every committed number exactly. Route 2 decodes the audio
+again, and float16 decoding is not bit-identical across GPU models. A full rerun on a Colab T4 changed
+445 of the 11,195 transcripts (4%, mostly 30-second windows) and flipped 42 labels relative to the
+committed RTX 3050 run. Estimates moved by up to 0.03 (H1 calibration-in-the-large: −0.074 → −0.061),
+and every hypothesis decision stayed the same.
 
 ## Demo: Transcript Review Console
 

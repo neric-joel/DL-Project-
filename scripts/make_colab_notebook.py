@@ -21,7 +21,7 @@ cells = [
 
 This notebook reproduces the study in [{REPO}]({REPO}) on Google Colab.
 
-* **Part A (about 5 minutes, CPU is fine):** rebuild every table and figure from the per-unit results
+* **Part A (about 2 minutes, CPU is fine):** rebuild every table and figure from the per-unit results
   committed in the repository.
 * **Part B (about 1 hour on a T4 GPU):** run the whole pipeline from the raw audio: download both
   datasets, run Whisper-small on 11,195 units, score, evaluate, and draw the figures.
@@ -81,7 +81,7 @@ everything under `results/`. Each step is resumable if the runtime disconnects.
 !asrshift prepare
 """),
     code("""
-# ~50 minutes on a T4, resumable. Part A's committed results are overwritten by the steps below.
+# about 1 hour on a T4, resumable. Part A's committed results are overwritten by the steps below.
 !asrshift infer
 """),
     code("""
@@ -91,9 +91,10 @@ everything under `results/`. Each step is resumable if the runtime disconnects.
 !asrshift report
 """),
     md("""
-Compare this run with the committed results. GPU float16 decoding is not bit-identical across GPU
-models, so a handful of transcripts can differ from the ones decoded on the RTX 3050 and the numbers
-may move in the last digit.
+Compare this run with the committed results. Float16 decoding is not bit-identical across GPU
+models. In our test on a T4, 445 of the 11,195 transcripts (4%, mostly 30-second windows) came out
+differently from the committed RTX 3050 run and 42 labels flipped; the estimates moved by up to 0.03
+and every hypothesis decision stayed the same.
 """),
     code("""
 import io, subprocess
@@ -107,7 +108,7 @@ t = "results/tables/small"
 cols = ["units", "wer", "err_rate", "mean_conf"]
 display(pd.concat({"committed": committed(f"{t}/asr_summary.csv").set_index("set")[cols],
                    "this run": pd.read_csv(f"{t}/asr_summary.csv").set_index("set")[cols]}, axis=1).round(3))
-cols = ["estimate", "p_holm", "supported"]
+cols = ["estimate", "ci_lo", "ci_hi", "p_holm", "supported"]
 display(pd.concat({"committed": committed(f"{t}/err/hypotheses.csv").set_index("hypothesis")[cols],
                    "this run": pd.read_csv(f"{t}/err/hypotheses.csv").set_index("hypothesis")[cols]}, axis=1).round(3))
 """),
