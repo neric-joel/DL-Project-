@@ -1,0 +1,11 @@
+signal,eval,value,reference,fired
+P1 review share at Eka 10% threshold,pm_window_test,0,"Eka test 0.096 [0.040, 0.129]",True
+P1 review share at Eka 10% threshold,pm_turn_test,0.061187,"Eka test 0.096 [0.040, 0.129]",False
+P3 review share at Eka 10% threshold,pm_window_test,0.037285,"Eka test 0.120 [0.051, 0.154]",True
+P3 review share at Eka 10% threshold,pm_turn_test,0.072159,"Eka test 0.120 [0.051, 0.154]",False
+mean confidence shift (Eka SDs),pm_window_test,0.7225,|shift| > 0.5,True
+mean P3 risk shift (Eka SDs),pm_window_test,-0.042925,|shift| > 0.5,False
+KS test on confidence vs Eka validation,pm_window_test,0.44422,p = 1.7e-75,True
+mean confidence shift (Eka SDs),pm_turn_test,-0.076033,|shift| > 0.5,False
+mean P3 risk shift (Eka SDs),pm_turn_test,-0.23885,|shift| > 0.5,False
+KS test on confidence vs Eka validation,pm_turn_test,0.14539,p = 5.4e-12,True

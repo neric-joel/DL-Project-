@@ -1,0 +1,7 @@
+hypothesis,statement,estimate,ci_lo,ci_hi,p_one_sided,n_boot,testable,p_holm,supported
+H1,P3 calibration-in-the-large on windows < 0 (overconfident),-0.01527,-0.057019,0.024915,0.24838,2000,True,0.9935,False
+H2,P3 share of erroneous units auto-accepted at the Eka 10% threshold: windows minus Eka test > 0,0.15612,0.080701,0.22449,0.003998,2000,True,0.01999,True
+H3a,ECE of P4 minus P3 on windows < 0,0.0053547,-0.022758,0.031042,0.6067,2000,True,1,False
+H3b,|accepted error - 0.20| at the empirical risk target: P4 minus P3 < 0,0.027662,-0.075905,0.10507,0.71114,2000,True,1,False
+H3c,|accepted error - 0.20| with the label-free plug-in rule: P4 minus P3 < 0,0.022167,-0.007235,0.04476,0.93303,2000,True,1,False
+H4,word-level ECE: windows minus Eka test > 0,0.01469,0.0052787,0.02018,0.0009995,2000,True,0.005997,True

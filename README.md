@@ -51,6 +51,12 @@ Intervals are 95% cluster-bootstrap intervals, and hypothesis tests are one-side
 7. **A label-free alarm would have caught the shift.** At the frozen threshold, the share of windows sent to
    review falls outside its Eka interval, and mean confidence moves by 0.8 Eka standard deviations. Neither
    needs a single target label.
+8. **A larger model (exploratory: whisper-large-v3-turbo,
+   [summary](results/SUMMARY_large-v3-turbo.md)).** WER falls to 10.1% on Eka and 9.9% on windows, and
+   its Eka-calibrated probabilities transfer well (calibration-in-the-large −0.015, so H1 does not hold).
+   The thresholds still do not transfer: the "10%" budget reviews 3.7% of windows (0.0% with raw
+   confidence), and 39% of accepted windows need correcting. A better model fixes the calibration, not
+   the operating point.
 
 **For a team deploying a clinical scribe:** do not carry a review threshold from dictation-style audio to
 conversations. Monitor the review share and the confidence distribution for drift. Recalibrate on a few

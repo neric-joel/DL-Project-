@@ -1,0 +1,396 @@
+{
+  "model": "large-v3-turbo",
+  "n_boot": 2000,
+  "labels": {
+    "err": {
+      "policy_info": {
+        "window": {
+          "P1": {},
+          "P2": {},
+          "P2-rawCR": {},
+          "P3": {
+            "C": 0.1,
+            "coef_standardised": {
+              "mean_logprob": -0.2688,
+              "min_seg_logprob": 0.0881,
+              "word_p_mean": -0.6483,
+              "word_p_min": -0.0879,
+              "word_p_q10": -0.8712,
+              "word_frac_low": -0.285,
+              "nsp_max": -0.0282,
+              "cr_max": -0.192,
+              "rep3": 0.2359,
+              "fallback": 0.0391,
+              "log_words": 0.2699,
+              "log_duration": 0.2524,
+              "words_per_s": -0.1512,
+              "n_segments": 0.0044,
+              "empty_hyp": 0.0
+            }
+          },
+          "P3-conf": {
+            "C": 0.1
+          },
+          "P1-retuned": {},
+          "P2-retuned": {},
+          "P4": {
+            "a": 0.9672550938054739,
+            "b": 0.09348962343877402
+          },
+          "P4-refit": {
+            "C": 0.01
+          }
+        },
+        "turn": {
+          "P1": {},
+          "P2": {},
+          "P2-rawCR": {},
+          "P3": {
+            "C": 0.1,
+            "coef_standardised": {
+              "mean_logprob": -0.2688,
+              "min_seg_logprob": 0.0881,
+              "word_p_mean": -0.6483,
+              "word_p_min": -0.0879,
+              "word_p_q10": -0.8712,
+              "word_frac_low": -0.285,
+              "nsp_max": -0.0282,
+              "cr_max": -0.192,
+              "rep3": 0.2359,
+              "fallback": 0.0391,
+              "log_words": 0.2699,
+              "log_duration": 0.2524,
+              "words_per_s": -0.1512,
+              "n_segments": 0.0044,
+              "empty_hyp": 0.0
+            }
+          },
+          "P3-conf": {
+            "C": 0.1
+          },
+          "P1-retuned": {},
+          "P2-retuned": {},
+          "P4": {
+            "a": 0.6013575806714455,
+            "b": -0.7676209480120826
+          },
+          "P4-refit": {
+            "C": 0.1
+          }
+        }
+      }
+    },
+    "any_err": {
+      "policy_info": {
+        "window": {
+          "P1": {},
+          "P2": {},
+          "P2-rawCR": {},
+          "P3": {
+            "C": 0.1,
+            "coef_standardised": {
+              "mean_logprob": -0.4298,
+              "min_seg_logprob": 0.1325,
+              "word_p_mean": -0.8795,
+              "word_p_min": -0.174,
+              "word_p_q10": -0.5236,
+              "word_frac_low": -0.2669,
+              "nsp_max": -0.0223,
+              "cr_max": 0.3599,
+              "rep3": 0.0846,
+              "fallback": 0.0728,
+              "log_words": 0.4566,
+              "log_duration": 0.6099,
+              "words_per_s": 0.1574,
+              "n_segments": 0.0474,
+              "empty_hyp": 0.0
+            }
+          },
+          "P3-conf": {
+            "C": 0.1
+          },
+          "P1-retuned": {},
+          "P2-retuned": {},
+          "P4": {
+            "a": 1.8949659553154827,
+            "b": -1.097254916795474
+          },
+          "P4-refit": {
+            "C": 1.0
+          }
+        },
+        "turn": {
+          "P1": {},
+          "P2": {},
+          "P2-rawCR": {},
+          "P3": {
+            "C": 0.1,
+            "coef_standardised": {
+              "mean_logprob": -0.4298,
+              "min_seg_logprob": 0.1325,
+              "word_p_mean": -0.8795,
+              "word_p_min": -0.174,
+              "word_p_q10": -0.5236,
+              "word_frac_low": -0.2669,
+              "nsp_max": -0.0223,
+              "cr_max": 0.3599,
+              "rep3": 0.0846,
+              "fallback": 0.0728,
+              "log_words": 0.4566,
+              "log_duration": 0.6099,
+              "words_per_s": 0.1574,
+              "n_segments": 0.0474,
+              "empty_hyp": 0.0
+            }
+          },
+          "P3-conf": {
+            "C": 0.1
+          },
+          "P1-retuned": {},
+          "P2-retuned": {},
+          "P4": {
+            "a": 0.9152636338814023,
+            "b": -0.42042913218465156
+          },
+          "P4-refit": {
+            "C": 0.1
+          }
+        }
+      }
+    },
+    "severe_err": {
+      "policy_info": {
+        "window": {
+          "P1": {},
+          "P2": {},
+          "P2-rawCR": {},
+          "P3": {
+            "C": 0.1,
+            "coef_standardised": {
+              "mean_logprob": -0.1348,
+              "min_seg_logprob": -0.0539,
+              "word_p_mean": -0.7201,
+              "word_p_min": -0.0068,
+              "word_p_q10": -0.5828,
+              "word_frac_low": -0.1319,
+              "nsp_max": -0.0283,
+              "cr_max": -0.3537,
+              "rep3": 0.3034,
+              "fallback": 0.071,
+              "log_words": -0.32,
+              "log_duration": -0.1837,
+              "words_per_s": -0.1581,
+              "n_segments": -0.0459,
+              "empty_hyp": 0.0
+            }
+          },
+          "P3-conf": {
+            "C": 0.1
+          },
+          "P1-retuned": {},
+          "P2-retuned": {},
+          "P4": {
+            "a": 1.7094841649966612,
+            "b": 2.285119334496301
+          },
+          "P4-refit": {
+            "C": 1.0
+          }
+        },
+        "turn": {
+          "P1": {},
+          "P2": {},
+          "P2-rawCR": {},
+          "P3": {
+            "C": 0.1,
+            "coef_standardised": {
+              "mean_logprob": -0.1348,
+              "min_seg_logprob": -0.0539,
+              "word_p_mean": -0.7201,
+              "word_p_min": -0.0068,
+              "word_p_q10": -0.5828,
+              "word_frac_low": -0.1319,
+              "nsp_max": -0.0283,
+              "cr_max": -0.3537,
+              "rep3": 0.3034,
+              "fallback": 0.071,
+              "log_words": -0.32,
+              "log_duration": -0.1837,
+              "words_per_s": -0.1581,
+              "n_segments": -0.0459,
+              "empty_hyp": 0.0
+            }
+          },
+          "P3-conf": {
+            "C": 0.1
+          },
+          "P1-retuned": {},
+          "P2-retuned": {},
+          "P4": {
+            "a": 0.6187437939426335,
+            "b": -1.6095859844230094
+          },
+          "P4-refit": {
+            "C": 1.0
+          }
+        }
+      }
+    },
+    "crit_err": {
+      "policy_info": {
+        "window": {
+          "P1": {},
+          "P2": {},
+          "P2-rawCR": {},
+          "P3": {
+            "C": 1.0,
+            "coef_standardised": {
+              "mean_logprob": -0.1285,
+              "min_seg_logprob": 0.5267,
+              "word_p_mean": -1.1906,
+              "word_p_min": -0.2887,
+              "word_p_q10": -0.0352,
+              "word_frac_low": -0.276,
+              "nsp_max": -0.1018,
+              "cr_max": -1.0037,
+              "rep3": 0.2542,
+              "fallback": -0.1006,
+              "log_words": 1.7851,
+              "log_duration": 0.2293,
+              "words_per_s": 0.0453,
+              "n_segments": -0.1837,
+              "empty_hyp": 0.0
+            }
+          },
+          "P3-conf": {
+            "C": 0.1
+          },
+          "P1-retuned": {},
+          "P2-retuned": {},
+          "P4": {
+            "a": 0.2259596690229625,
+            "b": -0.6541923250414274
+          },
+          "P4-refit": {
+            "C": 0.1
+          }
+        },
+        "turn": {
+          "P1": {},
+          "P2": {},
+          "P2-rawCR": {},
+          "P3": {
+            "C": 1.0,
+            "coef_standardised": {
+              "mean_logprob": -0.1285,
+              "min_seg_logprob": 0.5267,
+              "word_p_mean": -1.1906,
+              "word_p_min": -0.2887,
+              "word_p_q10": -0.0352,
+              "word_frac_low": -0.276,
+              "nsp_max": -0.1018,
+              "cr_max": -1.0037,
+              "rep3": 0.2542,
+              "fallback": -0.1006,
+              "log_words": 1.7851,
+              "log_duration": 0.2293,
+              "words_per_s": 0.0453,
+              "n_segments": -0.1837,
+              "empty_hyp": 0.0
+            }
+          },
+          "P3-conf": {
+            "C": 0.1
+          },
+          "P1-retuned": {},
+          "P2-retuned": {},
+          "P4": {
+            "a": 0.7005503582727874,
+            "b": -0.8690157874673202
+          },
+          "P4-refit": {
+            "C": 0.1
+          }
+        }
+      }
+    },
+    "err_c3": {
+      "policy_info": {
+        "window": {
+          "P1": {},
+          "P2": {},
+          "P2-rawCR": {},
+          "P3": {
+            "C": 0.1,
+            "coef_standardised": {
+              "mean_logprob": -0.2688,
+              "min_seg_logprob": 0.0881,
+              "word_p_mean": -0.6483,
+              "word_p_min": -0.0879,
+              "word_p_q10": -0.8712,
+              "word_frac_low": -0.285,
+              "nsp_max": -0.0282,
+              "cr_max": -0.192,
+              "rep3": 0.2359,
+              "fallback": 0.0391,
+              "log_words": 0.2699,
+              "log_duration": 0.2524,
+              "words_per_s": -0.1512,
+              "n_segments": 0.0044,
+              "empty_hyp": 0.0
+            }
+          },
+          "P3-conf": {
+            "C": 0.1
+          },
+          "P1-retuned": {},
+          "P2-retuned": {},
+          "P4": {
+            "a": 0.9672550938054739,
+            "b": 0.09348962343877402
+          },
+          "P4-refit": {
+            "C": 0.01
+          }
+        },
+        "turn": {
+          "P1": {},
+          "P2": {},
+          "P2-rawCR": {},
+          "P3": {
+            "C": 0.1,
+            "coef_standardised": {
+              "mean_logprob": -0.2688,
+              "min_seg_logprob": 0.0881,
+              "word_p_mean": -0.6483,
+              "word_p_min": -0.0879,
+              "word_p_q10": -0.8712,
+              "word_frac_low": -0.285,
+              "nsp_max": -0.0282,
+              "cr_max": -0.192,
+              "rep3": 0.2359,
+              "fallback": 0.0391,
+              "log_words": 0.2699,
+              "log_duration": 0.2524,
+              "words_per_s": -0.1512,
+              "n_segments": 0.0044,
+              "empty_hyp": 0.0
+            }
+          },
+          "P3-conf": {
+            "C": 0.1
+          },
+          "P1-retuned": {},
+          "P2-retuned": {},
+          "P4": {
+            "a": 0.6343022944663278,
+            "b": -0.7093674592359654
+          },
+          "P4-refit": {
+            "C": 0.1
+          }
+        }
+      }
+    }
+  }
+}

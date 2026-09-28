@@ -57,12 +57,16 @@ def build(model: str = "small") -> str:
                         "Negations right", "Eka entities right", "Shared medical terms right"]), ""]
 
     s += ["## Confirmatory hypotheses (Holm-adjusted, one-sided)", ""]
+    notes = VERDICT_NOTES if model.replace("/", "_") == "small" else {}  # amendment 6 concerns whisper-small
+    if model.replace("/", "_") != "small":
+        s += ["*Exploratory model (protocol amendment 5): the tests are run as for whisper-small, but they "
+              "are not part of the confirmatory family.*", ""]
     rows = [[r["hypothesis"], r["statement"], _f(r["estimate"]), f"[{_f(r['ci_lo'])}, {_f(r['ci_hi'])}]",
              _f(r["p_holm"], 4) if r["testable"] else "not testable",
-             ("**supported**" if r["supported"] else "not supported") + VERDICT_NOTES.get(r["hypothesis"], "")]
+             ("**supported**" if r["supported"] else "not supported") + notes.get(r["hypothesis"], "")]
             for _, r in hyp.iterrows()]
     s += [_table(rows, ["", "Statement", "Estimate", "95% CI", "p (Holm)", "Verdict"]), ""]
-    if any(h in set(hyp["hypothesis"]) for h in VERDICT_NOTES):
+    if any(h in set(hyp["hypothesis"]) for h in notes):
         s += ["\\* H3b's verdict flips with the post-hoc scoring correction of Amendment 6 (p = 0.20 before, "
               "0.006 after), so it is reported as unstable and not counted as a confirmatory finding.", ""]
 
