@@ -34,6 +34,16 @@ POLICY = {
 }
 
 
+FEATURE_NAMES = {
+    "mean_logprob": "mean token log-prob", "min_seg_logprob": "worst segment log-prob",
+    "word_p_mean": "mean word probability", "word_p_min": "lowest word probability",
+    "word_p_q10": "10th pct word probability", "word_frac_low": "share of words p < 0.5",
+    "nsp_max": "no-speech probability", "cr_max": "compression ratio", "rep3": "repeated trigrams",
+    "fallback": "temperature fallback", "log_words": "number of words (log)", "log_duration": "duration (log)",
+    "words_per_s": "words per second", "n_segments": "number of segments", "empty_hyp": "empty transcript",
+}
+
+
 def _style():
     plt.rcParams.update({
         "figure.facecolor": SURFACE, "axes.facecolor": SURFACE, "savefig.facecolor": SURFACE,
@@ -143,15 +153,20 @@ def fig_risk_coverage(tables, units: pd.DataFrame | None):
             o = op.iloc[0]
             ax.plot(1 - o["review_rate"], o["accepted_err_rate"], marker="o", markersize=9, color=POLICY["P3"][1],
                     markeredgecolor=INK, zorder=5)
-            ax.annotate(f"Eka-tuned 10% budget:\nreviews {o['review_rate']:.0%}, accepted {o['accepted_err_rate']:.0%} erroneous",
-                        (1 - o["review_rate"], o["accepted_err_rate"]), xytext=(-150, -45), textcoords="offset points",
-                        fontsize=8.5, color=INK, arrowprops={"arrowstyle": "-", "color": INK2})
+            ax.annotate(f"P3 at the Eka-tuned 10% budget:\nreviews {o['review_rate']:.1%}, "
+                        f"accepted {o['accepted_err_rate']:.0%} erroneous",
+                        (1 - o["review_rate"], o["accepted_err_rate"]), xytext=(0.30, 0.80), textcoords="axes fraction",
+                        fontsize=8.5, color=INK, ha="left",
+                        bbox={"boxstyle": "round,pad=0.3", "fc": SURFACE, "ec": GRID},
+                        arrowprops={"arrowstyle": "->", "color": INK2, "lw": 1})
         ax.set_title(DOMAIN[key][0])
         ax.set_xlabel("Coverage (share accepted automatically)")
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1)
     axes[0].set_ylabel("Share of accepted transcripts with WER > 10%")
-    axes[1].legend(loc="upper left", fontsize=8.5)
+    handles, labels = axes[1].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="lower center", ncol=3, fontsize=9, bbox_to_anchor=(0.5, -0.08))
+    fig.tight_layout(rect=(0, 0.06, 1, 1))
     _save(fig, "fig3_risk_coverage")
 
 
@@ -166,24 +181,29 @@ def fig_threshold_transfer(tables):
         d = ops[(ops["eval"] == key) & (ops["policy"] == "P3") & ops["point"].str.startswith("budget")].sort_values("target")
         ax.errorbar(d["target"], d["review_rate"], yerr=[d["review_rate"] - d["review_rate_lo"], d["review_rate_hi"] - d["review_rate"]],
                     color=col, marker=mk, capsize=3, label=lab.split(" (")[0])
-    ax.set_xlabel("Review budget set on Eka validation")
+    ax.set_xlabel("Review budget set on Eka validation (P3)")
     ax.set_ylabel("Share actually sent to review")
-    ax.set_title("Frozen thresholds: promised vs actual review load")
+    ax.set_title("Review budgets: promised vs actual")
     ax.legend(loc="upper left", fontsize=9)
     ax = axes[1]
     ax.plot([0.05, 0.35], [0.05, 0.35], color=INK2, linestyle=":", linewidth=1.2)
-    for pol, key, off in [("P3", "eka_test", -0.008), ("P3", "pm_window_test", 0.0), ("P4", "pm_window_test", 0.008)]:
-        d = ops[(ops["eval"] == key) & (ops["policy"] == pol) & ops["point"].str.startswith("risk")].sort_values("target")
-        lab, col, _ = POLICY[pol]
-        mk = DOMAIN[key][2]
+    series = [("P3", "risk", "-", -0.012, "P3 frozen, threshold from Eka labels"),
+              ("P3", "plugin", "--", -0.004, "P3 frozen, plug-in (no labels)"),
+              ("P4", "risk", "-", 0.004, "P4, threshold from PriMock labels"),
+              ("P4", "plugin", "--", 0.012, "P4, plug-in (no labels)")]
+    for pol, rule, ls, off, lab in series:
+        d = ops[(ops["eval"] == "pm_window_test") & (ops["policy"] == pol) & ops["point"].str.startswith(rule + "_")
+                & ops["feasible"]].sort_values("target")
+        col = POLICY[pol][1]
         ax.errorbar(d["target"] + off, d["accepted_err_rate"],
                     yerr=[d["accepted_err_rate"] - d["accepted_err_rate_lo"], d["accepted_err_rate_hi"] - d["accepted_err_rate"]],
-                    color=col, marker=mk, capsize=3, linestyle="none" if key == "eka_test" else "-",
-                    label=f"{pol} on {DOMAIN[key][0].split(' (')[0]}")
-    ax.set_xlabel("Target error rate among accepted transcripts")
-    ax.set_ylabel("Realised error rate among accepted")
-    ax.set_title("Risk targets: promise kept only after recalibration?")
-    ax.legend(loc="upper left", fontsize=9)
+                    color=col, marker="D" if rule == "risk" else "s", capsize=3, linestyle=ls, label=lab,
+                    mfc=col if rule == "risk" else SURFACE)
+    ax.set_xlabel("Target error rate among accepted windows")
+    ax.set_ylabel("Realised error rate among accepted windows")
+    ax.set_title("Risk targets on PriMock57 windows")
+    ax.legend(loc="upper left", fontsize=8.5)
+    fig.tight_layout(w_pad=3)
     _save(fig, "fig4_threshold_transfer")
 
 
@@ -211,12 +231,16 @@ def fig_learning_curve(tables):
     axes[1].axhline(0.20, color=INK2, linestyle=":", linewidth=1.2)
     axes[1].text(lc["k"].max(), 0.205, "target", color=INK2, fontsize=8.5, ha="right", va="bottom")
     axes[0].set_ylabel("ECE on held-out consultations")
-    axes[1].set_ylabel("Error rate among accepted, plug-in rule at 20%")
+    axes[1].set_ylabel("Accepted & erroneous (plug-in rule, target 20%)")
     for ax in axes:
-        ax.set_xlabel("Consultations used for recalibration (50 random draws each)")
+        ax.set_xlabel("Recalibration consultations (50 draws each)")
         ax.set_xticks(sorted(lc["k"].unique()))
     axes[0].legend(fontsize=9)
-    axes[0].set_title("How much target data does recalibration need?")
+    axes[0].set_title("Calibration error")
+    axes[1].set_title("Does the 20% promise hold?")
+    fig.suptitle("How much target data does recalibration need? (median and IQR over draws)", x=0.02, ha="left",
+                 fontweight="bold", fontsize=11.5)
+    fig.tight_layout(w_pad=3)
     _save(fig, "fig5_recalibration_data")
 
 
@@ -256,7 +280,7 @@ def fig_feature_shift(tables):
             label="PriMock57 turns")
     ax.axvline(0, color=INK2, linewidth=1)
     ax.set_yticks(y)
-    ax.set_yticklabels(d["feature"])
+    ax.set_yticklabels([FEATURE_NAMES.get(f, f) for f in d["feature"]])
     tot_w, tot_t = d["logit_shift_pm_window_test"].sum(), d["logit_shift_pm_turn_test"].sum()
     ax.set_xlabel("Change in P3's mean log-odds of error vs Eka test, by feature\n(coefficient × shift of the feature's mean)")
     ax.set_title("What moves the frozen model's risk under shift")
@@ -278,8 +302,9 @@ def fig_length_strata(tables):
         err = [d["P3_citl"] - d.get("P3_citl_lo", d["P3_citl"]), d.get("P3_citl_hi", d["P3_citl"]) - d["P3_citl"]]
         ax.errorbar(x, d["P3_citl"], yerr=err, color=col, marker=mk, linestyle="none", capsize=3,
                     label=lab.split(" (")[0])
-        for xi, (_, r) in zip(x, d.iterrows()):
-            ax.text(xi, r["P3_citl"], f"  n={int(r['n'])}", fontsize=7.5, color=INK2, va="center")
+        lows = d.get("P3_citl_lo", d["P3_citl"]).fillna(d["P3_citl"])
+        for xi, lo, (_, r) in zip(x, lows, d.iterrows()):
+            ax.text(xi, lo - 0.012, f"n={int(r['n'])}", fontsize=7.5, color=INK2, ha="center", va="top")
     ax.axhline(0, color=INK2, linewidth=1)
     ax.set_xticks(range(len(order)))
     ax.set_xticklabels([f"{b} words" for b in order], fontsize=9)
@@ -302,31 +327,33 @@ def fig_null_baseline(tables):
             ax.axvline(hy.loc[hyp, "estimate"], color=POLICY["P3"][1], linewidth=2.5, label="observed")
         ax.set_title(title, fontsize=10.5)
         ax.set_ylabel("simulations")
-    axes[0].legend(fontsize=8.5)
+    axes[0].legend(fontsize=8.5, loc="upper left", framealpha=0.95, frameon=True)
+    fig.tight_layout(w_pad=3)
     _save(fig, "fig9_null_baseline")
 
 
 def fig_asr_overview(tables):
     a = pd.read_csv(tables / "asr_summary.csv").set_index("set")
     keys = ["eka_test", "pm_turn_test", "pm_window_test"]
-    fig, axes = plt.subplots(1, 2, figsize=(10.5, 3.8))
+    fig, axes = plt.subplots(1, 2, figsize=(11.5, 4.0), gridspec_kw={"width_ratios": [1.1, 1], "wspace": 0.75})
     ax = axes[0]
     for i, key in enumerate(keys):
         lab, col, _ = DOMAIN[key]
         r = a.loc[key]
         ax.barh(i, r["wer"], color=col, height=0.55)
         ax.errorbar(r["wer"], i, xerr=[[r["wer"] - r["wer_lo"]], [r["wer_hi"] - r["wer"]]], color=INK, capsize=3)
-        ax.text(r["wer_hi"] + 0.01, i, f"{r['wer']:.1%}  (sub {r['sub_rate']:.1%} · del {r['del_rate']:.1%} · ins {r['ins_rate']:.1%})",
-                va="center", fontsize=8.5, color=INK)
+        ax.text(r["wer_hi"] + 0.008, i - 0.12, f"{r['wer']:.1%}", va="center", fontsize=9.5, color=INK, fontweight="bold")
+        ax.text(r["wer_hi"] + 0.008, i + 0.17, f"sub {r['sub_rate']:.1%} · del {r['del_rate']:.1%} · ins {r['ins_rate']:.1%}",
+                va="center", fontsize=8, color=INK2)
     ax.set_yticks(range(len(keys)))
     ax.set_yticklabels([DOMAIN[k][0].split(" (")[0] for k in keys])
-    ax.set_xlim(0, max(a.loc[keys, "wer_hi"]) * 2.1)
-    ax.set_xlabel("Word error rate")
+    ax.set_xlim(0, max(a.loc[keys, "wer_hi"]) * 1.9)
+    ax.set_xlabel("Word error rate (95% CI)")
     ax.set_title("Whisper-small word error rate")
     ax.invert_yaxis()
     ax = axes[1]
-    metrics = [("err_rate", "Transcripts with WER > 10%"), ("number_acc", "Numbers recognised"),
-               ("negation_acc", "Negations recognised")]
+    metrics = [("err_rate", "Transcripts with\nWER > 10%"), ("number_acc", "Numbers\nrecognised"),
+               ("negation_acc", "Negations\nrecognised")]
     for i, key in enumerate(keys):
         lab, col, mk = DOMAIN[key]
         r = a.loc[key]
