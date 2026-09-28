@@ -1,0 +1,13 @@
+policy,tuned_on,threshold,eval,review_rate,err_caught,accepted_err_rate,accepted_wer,word_errors_caught,n_accepted_errors
+P1,validation,0.58205,eka_test,0.08874,0.14777,0.51937,0.12021,0.16396,496
+P1,validation,0.58205,pm_window_test,0.00095602,0,0.53014,0.11754,0,554
+P1,validation,0.58205,pm_turn_test,0.031893,0.066634,0.36487,0.11169,0.039936,1905
+P1,calibration+validation,0.57539,eka_test,0.10496,0.17526,0.51173,0.11816,0.18062,480
+P1,calibration+validation,0.57539,pm_window_test,0.00095602,0,0.53014,0.11754,0,554
+P1,calibration+validation,0.57539,pm_turn_test,0.035416,0.072024,0.36409,0.11147,0.042271,1894
+P3,validation,0.90189,eka_test,0.11737,0.19759,0.50486,0.11257,0.22929,467
+P3,validation,0.90189,pm_window_test,0.0066922,0.0072202,0.52936,0.11701,0.010202,550
+P3,validation,0.90189,pm_turn_test,0.071018,0.12886,0.35489,0.1073,0.091177,1778
+P3,calibration+validation,0.9031,eka_test,0.11355,0.19072,0.507,0.11317,0.22446,471
+P3,calibration+validation,0.9031,pm_window_test,0.0066922,0.0072202,0.52936,0.11701,0.010202,550
+P3,calibration+validation,0.9031,pm_turn_test,0.070091,0.1269,0.35533,0.10744,0.089457,1782

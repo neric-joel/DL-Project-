@@ -1,0 +1,13 @@
+analysis,windows_test,policy,ece,citl,recal_windows,budget_0.10:feasible,budget_0.10:review_rate,budget_0.10:accepted_err_rate,risk_0.20:feasible,risk_0.20:review_rate,risk_0.20:accepted_err_rate,plugin_0.20:feasible,plugin_0.20:review_rate,plugin_0.20:accepted_err_rate
+all test windows (primary),1046,P3,0.083325,-0.078498,194,True,0.0066922,0.52936,True,0.60325,0.35663,True,0.76482,0.31707
+all test windows (primary),1046,P3-conf,0.049512,0.026145,194,True,0.016252,0.52575,True,0.8499,0.22293,True,0.97228,0.13793
+all test windows (primary),1046,P4,0.055526,0.019348,194,True,0.17878,0.46217,True,0.85086,0.30769,True,0.94742,0.12727
+drop windows longer than 30 s,1020,P3,0.084116,-0.077922,194,True,0.0068627,0.52912,True,0.6049,0.35236,True,0.76667,0.31092
+drop windows longer than 30 s,1020,P3-conf,0.050223,0.024216,194,True,0.015686,0.5259,True,0.84608,0.22293,True,0.97157,0.13793
+drop windows longer than 30 s,1020,P4,0.056236,0.019897,194,True,0.17843,0.46301,True,0.85196,0.30464,True,0.94706,0.11111
+drop windows with overlapping speech,125,P3,0.15126,0.14012,194,True,0,0.288,True,0.584,0.13462,True,0.816,0.086957
+drop windows with overlapping speech,125,P3-conf,0.19451,0.19252,194,True,0,0.288,True,0.712,0.13889,True,0.968,0.25
+drop windows with overlapping speech,125,P4,0.24624,0.24416,194,True,0.08,0.27826,True,0.88,0.066667,True,0.952,0
+drop windows where a wildcard absorbed > 3 words,985,P3,0.077519,-0.074521,194,True,0.0050761,0.51939,True,0.59797,0.34848,True,0.75736,0.30544
+drop windows where a wildcard absorbed > 3 words,985,P3-conf,0.05675,0.028305,194,True,0.012183,0.51593,True,0.84264,0.22581,True,0.97056,0.13793
+drop windows where a wildcard absorbed > 3 words,985,P4,0.056058,0.02421,194,True,0.16751,0.45488,True,0.8467,0.29801,True,0.94518,0.12963

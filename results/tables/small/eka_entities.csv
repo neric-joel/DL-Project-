@@ -1,0 +1,10 @@
+entity_type,entities,accuracy,error_rate
+drugs,724,0.33011,0.66989
+advices,116,0.73276,0.26724
+diagnostics,290,0.63103,0.36897
+clinical_findings,1724,0.79756,0.20244
+misc_medical,313,0.86581,0.13419
+all,3167,0.67982,0.32018
+context:conversation,163,0.80368,0.19632
+context:narration_entity,633,0.28752,0.71248
+context:narration_sentence,2371,0.77604,0.22396
