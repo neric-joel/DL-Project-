@@ -1,0 +1,22 @@
+# Exact versions the reported results were produced with (Python 3.12, Windows 11 and Linux).
+# GPU on Windows additionally needs: pip install -r requirements-gpu.txt
+faster-whisper==1.2.1
+ctranslate2==4.8.2
+av==18.1.0
+tokenizers==0.23.2
+huggingface_hub==1.33.0
+onnxruntime==1.30.0
+numpy==2.5.3
+scipy==1.18.1
+pandas==3.0.6
+pyarrow==25.0.1
+soundfile==0.14.0
+jiwer==4.0.0
+RapidFuzz==3.14.6
+whisper-normalizer==0.1.15
+scikit-learn==1.9.1
+matplotlib==3.11.2
+PyYAML==6.0.3
+requests==2.34.2
+tqdm==4.70.1
+pytest==9.1.1

@@ -1,0 +1,4 @@
+# CUDA 12 cuBLAS for the ctranslate2 wheels (Windows/Linux with an NVIDIA driver >= 525).
+# Not needed on Colab, which ships CUDA libraries.
+nvidia-cublas-cu12==12.9.2.10
+nvidia-cuda-nvrtc-cu12==12.9.86

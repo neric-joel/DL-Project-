@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+.ipynb_checkpoints/
+
+# Data, model weights and intermediate outputs (rebuilt by `asrshift download/prepare/infer/score`)
+data/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+*.log
