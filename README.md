@@ -6,7 +6,66 @@ Arizona State University, Fall 2026.
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/neric-joel/DL-Project-/blob/main/notebooks/reproduce_colab.ipynb)
 
-<!-- RESULTS -->
+## Findings in brief
+
+Whisper-small, 11,213 transcripts. The review policy was calibrated on Eka (Indian-English medical
+clips, median 5 words) and applied unchanged to PriMock57 consultations cut into 30-second windows
+(median 67 words, 4.8 speaker turns). Every number below comes from [results/SUMMARY.md](results/SUMMARY.md).
+Intervals are 95% cluster-bootstrap intervals, and hypothesis tests are one-sided and Holm-adjusted.
+
+1. **Whisper sounds more sure on conversations, but it is not more right.** Mean sequence confidence is
+   0.75 on PriMock57 windows against 0.61 on Eka clips, yet about half of the transcripts need correcting
+   in both (WER above 10%: 52% vs 55%). At any given confidence, a conversation window is more often
+   wrong (figure 1).
+2. **Frozen thresholds stop working.** A threshold that sends 10% of Eka validation clips to review sends
+   11.8% of held-out Eka clips, but only **0.3%** of conversation windows (0.1% for raw confidence).
+   52% of the windows it accepts automatically have WER above 10%. The share of erroneous transcripts that
+   slip through rises by 20 points (**H2 supported**, p = 0.004).
+3. **The calibrated model is overconfident on conversations.** It predicts that 44% of windows are
+   erroneous, but 52% are: calibration-in-the-large −0.074 [−0.111, −0.038] (**H1 supported**, p = 0.003).
+   Calibration error doubles (ECE 0.039 → 0.078) and ranking gets worse (AUROC 0.84 → 0.72). On short
+   single-speaker turns it errs the other way (underconfident, +0.081).
+4. **Why: length and speaker overlap, not word confidence.** At word level Whisper is *under*confident on
+   PriMock57: 94.5% of words are right against a mean word probability of 0.886 (**H4 supported** for
+   word-level ECE, 0.060 vs 0.026, but not in the direction the proposal expected). The transcript-level
+   failure follows from longer, multi-speaker units:
+   * the frozen model's length and segment-count features extrapolate (figure 7), and the same model
+     without them is not overconfident;
+   * a simulation in which Whisper's word probabilities are perfectly calibrated produces a gap of the
+     same size (null median −0.105 [−0.192, −0.016]);
+   * 88% of windows contain overlapping speech, and those windows carry the errors (55% erroneous against
+     28% without overlap);
+   * at matched length (25–41 words), single-speaker turns are calibrated (−0.001) while windows are still
+     overconfident (−0.141 [−0.224, −0.044]). Multi-speaker audio therefore adds something beyond length,
+     although this rests on 88 windows.
+5. **Recalibration fixes the probabilities, at a price.** Refitting two parameters on 10 PriMock57
+   consultations moves calibration-in-the-large from −0.074 to +0.029. The label-free plug-in rule then
+   keeps a 20% error promise (11.6% realised, against 31.2% for the frozen model), but only by sending
+   **96% of windows** to a human. None of the recalibration contrasts survives Holm correction (H3a and
+   H3c not supported). H3b's verdict changed with a post-hoc scoring fix, so it is reported as unstable
+   ([protocol, amendment 6](docs/PROTOCOL.md)).
+6. **Clinically critical words.** Negations are recognised 95.5% of the time on Eka but 87.8% on windows
+   (86.1% on turns), and 24% of windows contain a missed or wrong number or negation. Under the frozen
+   10% budget, an average test consultation has 8 auto-accepted dose or negation errors. A policy trained
+   on WER does not target these errors.
+7. **A label-free alarm would have caught the shift.** At the frozen threshold, the share of windows sent to
+   review falls outside its Eka interval, and mean confidence moves by 0.8 Eka standard deviations. Neither
+   needs a single target label.
+
+**For a team deploying a clinical scribe:** do not carry a review threshold from dictation-style audio to
+conversations. Monitor the review share and the confidence distribution for drift. Recalibrate on a few
+labelled consultations from the target setting before trusting auto-accept, and with a model of this
+size expect most conversation windows to need a human. Add a separate check for doses and negations,
+because a WER-based policy does not look for them.
+
+| | |
+|:---:|:---:|
+| ![Same confidence, different error rates](results/figures/fig1_confidence_vs_error.png) | ![Promised vs actual](results/figures/fig4_threshold_transfer.png) |
+| **Figure 1.** Error rate by Whisper confidence, and the confidence distributions. | **Figure 4.** Review share and accepted-error rate: promised vs realised. |
+| ![Reliability](results/figures/fig2_reliability.png) | ![Why](results/figures/fig7_feature_contributions.png) |
+| **Figure 2.** Reliability of the frozen (left) and recalibrated (right) model. | **Figure 7.** Which features move the frozen model's risk on PriMock57. |
+
+All ten figures are in [results/figures/](results/figures/).
 
 ## The question
 
@@ -137,7 +196,11 @@ tests/                   pytest suite
 
 ## Limitations
 
-* **One model.** Only whisper-small was run. Larger Whisper models may be better calibrated.
+* **One model (so far).** The confirmatory results are for whisper-small. A whisper-large-v3-turbo run is
+  declared as exploratory ([configs/large-v3-turbo.yaml](configs/large-v3-turbo.yaml)).
+* **Post-hoc scoring fix.** A normalisation defect ("Oh" read as the digit 0, plus unit spellings) was
+  found after the first results. It was fixed symmetrically and everything was rerun, and the protocol reports
+  every key number before and after (amendment 6).
 * **Simulated consultations.** PriMock57 is role-played by clinicians and staff, recorded over video
   calls, and transcribed verbatim. It is not real clinical data, and its speakers, accents and recording
   channel differ from Eka's in several ways at once. The shift we measure is a realistic *bundle*, not one
@@ -150,8 +213,9 @@ tests/                   pytest suite
 * **Label depends on length.** "WER above 10%" means *any error* for a 3-word clip and *7 or more errors*
   for a 66-word window. The length-stratified analysis, the length-matched contrast and the null
   baseline in the protocol check how much of the effect this explains.
-* **Medical terms on PriMock57** are matched with a lexicon extracted by a small local LLM from the human
-  transcripts. It is exploratory and awaits a manual audit (`results/terms/audit_sample.csv`).
+* **Medical terms on PriMock57** are matched with a lexicon built from Eka's human entity annotations
+  (270 shared terms). The comparison is exploratory, and a manual precision check of 100 matches
+  (`results/terms/audit_sample.csv`) is still to be filled in by the team.
 
 ## Team
 
