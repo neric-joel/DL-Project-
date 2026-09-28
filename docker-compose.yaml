@@ -1,0 +1,19 @@
+services:
+  # Tests + all tables and figures from the committed per-unit results (no downloads).
+  reproduce:
+    build: .
+    image: asrshift:latest
+    volumes:
+      - ./results:/app/results
+
+  # Full pipeline on CPU: downloads both datasets (~2.1 GB) into ./data and runs Whisper with int8.
+  # Slow on CPU (hours); the GPU path in the README is the intended way to run inference.
+  pipeline:
+    image: asrshift:latest
+    command: >
+      sh -c "asrshift download && asrshift prepare &&
+             asrshift infer --device cpu --compute-type int8 &&
+             asrshift score && asrshift evaluate && asrshift figures"
+    volumes:
+      - ./data:/app/data
+      - ./results:/app/results
