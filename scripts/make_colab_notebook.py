@@ -37,6 +37,7 @@ For Part B choose *Runtime → Change runtime type → T4 GPU* first.
     code("""
 !asrshift evaluate --n-boot 500
 !asrshift figures
+!asrshift report
 """),
     code("""
 import pandas as pd
@@ -77,6 +78,7 @@ everything under `results/`. Each step is resumable if the runtime disconnects.
 !asrshift score
 !asrshift evaluate
 !asrshift figures
+!asrshift report
 """),
     md("## One transcript, end to end"),
     code("""

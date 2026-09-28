@@ -13,7 +13,7 @@ services:
     command: >
       sh -c "asrshift download && asrshift prepare &&
              asrshift infer --device cpu --compute-type int8 &&
-             asrshift score && asrshift evaluate && asrshift figures"
+             asrshift score && asrshift evaluate && asrshift figures && asrshift report"
     volumes:
       - ./data:/app/data
       - ./results:/app/results

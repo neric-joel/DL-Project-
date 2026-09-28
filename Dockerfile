@@ -15,4 +15,4 @@ COPY tests ./tests
 COPY results ./results
 RUN pip install --no-deps -e .
 
-CMD ["sh", "-c", "pytest -q && asrshift evaluate && asrshift figures"]
+CMD ["sh", "-c", "pytest -q && asrshift evaluate && asrshift figures && asrshift report"]
