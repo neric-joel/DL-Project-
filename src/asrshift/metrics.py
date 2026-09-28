@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Callable
 
 import numpy as np
-from sklearn.metrics import roc_auc_score
+from scipy.stats import rankdata
 
 N_BINS = 15
 
@@ -49,10 +49,17 @@ def reliability(p: np.ndarray, y: np.ndarray, n_bins: int = N_BINS) -> list[dict
 
 
 def auroc(r: np.ndarray, y: np.ndarray) -> float:
-    y = np.asarray(y)
-    if y.min() == y.max():
+    """Area under the ROC curve via the Mann-Whitney rank sum (ties count one half).
+
+    Equal to ``sklearn.metrics.roc_auc_score`` up to floating-point rounding, and several times
+    faster, which matters inside the bootstrap.
+    """
+    pos = np.asarray(y) == 1
+    n1 = int(pos.sum())
+    n0 = len(pos) - n1
+    if n1 == 0 or n0 == 0:
         return float("nan")
-    return float(roc_auc_score(y, r))
+    return float((rankdata(r)[pos].sum() - n1 * (n1 + 1) / 2) / (n1 * n0))
 
 
 def risk_coverage(r: np.ndarray, loss: np.ndarray, weights: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray]:
@@ -126,6 +133,22 @@ def _ratio(num, den, mask):
     return float(num[mask].sum() / d) if d else float("nan")
 
 
+HEADLINE = ("review_rate", "err_caught", "accepted_err_rate", "accepted_crit_err_rate")
+
+
+def headline(review: np.ndarray, y: np.ndarray, crit: np.ndarray | None = None) -> tuple[float, ...]:
+    """The ``HEADLINE`` outcomes of ``operating_point`` with the same arithmetic, for bootstrap loops.
+
+    ``review`` is a boolean array and ``y`` (and ``crit``, the critical-error flags) are float arrays.
+    """
+    acc = ~review
+    n_err = y.sum()
+    return (float(review.mean()),
+            float((y * review).sum() / n_err) if n_err else float("nan"),
+            float(y[acc].mean()) if acc.any() else float("nan"),
+            float(crit[acc].mean()) if crit is not None and acc.any() else float("nan"))
+
+
 def operating_point(review: np.ndarray, y: np.ndarray, errors: np.ndarray, n_ref: np.ndarray,
                     extra: dict | None = None, p: np.ndarray | None = None) -> dict:
     """Outcomes of one review decision vector.
@@ -137,11 +160,11 @@ def operating_point(review: np.ndarray, y: np.ndarray, errors: np.ndarray, n_ref
     review = np.asarray(review, bool)
     y = np.asarray(y, float)
     acc = ~review
-    n_err = y.sum()
+    review_rate, err_caught, accepted_err_rate, _ = headline(review, y)
     out = {
-        "review_rate": float(review.mean()),
-        "err_caught": float((y * review).sum() / n_err) if n_err else float("nan"),
-        "accepted_err_rate": float(y[acc].mean()) if acc.any() else float("nan"),
+        "review_rate": review_rate,
+        "err_caught": err_caught,
+        "accepted_err_rate": accepted_err_rate,
         "accepted_wer": float(errors[acc].sum() / n_ref[acc].sum()) if acc.any() else float("nan"),
         "word_errors_caught": float(errors[review].sum() / errors.sum()) if errors.sum() else float("nan"),
         "n_accepted_errors": float((y * acc).sum()),
@@ -162,30 +185,51 @@ def operating_point(review: np.ndarray, y: np.ndarray, errors: np.ndarray, n_ref
     return out
 
 
+def _percentile_interval(vals: np.ndarray, level: float) -> tuple[float, float]:
+    vals = vals[np.isfinite(vals)]
+    if len(vals) == 0:
+        return float("nan"), float("nan")
+    a = (1 - level) / 2
+    return float(np.quantile(vals, a)), float(np.quantile(vals, 1 - a))
+
+
 class ClusterBootstrap:
     """Resample whole clusters (speakers, sessions, consultations) with replacement."""
+
+    CACHE_LIMIT = 20_000_000  # keep the resampled index arrays in memory up to this many entries
 
     def __init__(self, groups: np.ndarray, n_boot: int, seed: int):
         _, codes = np.unique(np.asarray(groups), return_inverse=True)
         self.members = [np.nonzero(codes == g)[0] for g in range(codes.max() + 1)]
         rng = np.random.default_rng(seed)
         self.draws = [rng.integers(0, len(self.members), len(self.members)) for _ in range(n_boot)]
+        self._cache = None
+        self._cacheable = len(codes) * n_boot <= self.CACHE_LIMIT
+
+    def _draw(self, d: np.ndarray) -> np.ndarray:
+        return np.concatenate([self.members[g] for g in d])
 
     def indices(self):
-        for d in self.draws:
-            yield np.concatenate([self.members[g] for g in d])
+        if self._cache is not None:
+            yield from self._cache
+        elif self._cacheable:
+            self._cache = [self._draw(d) for d in self.draws]
+            yield from self._cache
+        else:
+            for d in self.draws:
+                yield self._draw(d)
 
     def replicates(self, stat: Callable[[np.ndarray], float]) -> np.ndarray:
         """The statistic on every bootstrap replicate (non-finite values kept as NaN)."""
         return np.array([stat(ix) for ix in self.indices()], dtype=float)
 
     def interval(self, stat: Callable[[np.ndarray], float], level: float = 0.95) -> tuple[float, float]:
-        vals = self.replicates(stat)
-        vals = vals[np.isfinite(vals)]
-        if len(vals) == 0:
-            return float("nan"), float("nan")
-        a = (1 - level) / 2
-        return float(np.quantile(vals, a)), float(np.quantile(vals, 1 - a))
+        return _percentile_interval(self.replicates(stat), level)
+
+    def intervals(self, stat: Callable[[np.ndarray], tuple], level: float = 0.95) -> list[tuple[float, float]]:
+        """``interval`` for a statistic returning several values, computed in one pass over the replicates."""
+        vals = np.array([stat(ix) for ix in self.indices()], dtype=float).reshape(len(self.draws), -1)
+        return [_percentile_interval(col, level) for col in vals.T]
 
 
 def holm(pvalues: list[float]) -> list[float]:

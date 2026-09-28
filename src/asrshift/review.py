@@ -45,7 +45,7 @@ def probabilities(feats: dict, domain: str = "window", model: str = "small") -> 
     x = np.array([feats[f] for f in doc["features"]], float)
     p3 = doc["P3"]
     z = float(((x - np.array(p3["mean"])) / np.array(p3["scale"])) @ np.array(p3["coef"]) + p3["intercept"])
-    out = {"P1": 1.0 - feats["conf"], "P3": 1 / (1 + np.exp(-z))}
+    out = {"P1": 1.0 - feats["conf"], "P3": float(1 / (1 + np.exp(-z)))}
     key = "turn" if domain.startswith("turn") else "window"
     if key in doc["P4"] and domain != "eka":
         a, b = doc["P4"][key]["a"], doc["P4"][key]["b"]

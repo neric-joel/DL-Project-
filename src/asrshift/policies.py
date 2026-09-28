@@ -15,6 +15,7 @@ evaluation set itself by consultation; not deployable, an upper reference).
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -48,8 +49,30 @@ class ConstantModel:
         return np.column_stack([np.full(len(X), 1 - self.rate), np.full(len(X), self.rate)])
 
 
+_FITS: dict[str, object] = {}
+
+
+def _fingerprint(*arrays) -> str:
+    h = hashlib.sha1()
+    for a in map(np.asarray, arrays):
+        h.update(f"{a.dtype.str}{a.shape}".encode())
+        h.update("\x1f".join(map(str, a.ravel())).encode() if a.dtype == object else a.tobytes())
+    return h.hexdigest()
+
+
 def fit_logreg(X: np.ndarray, y: np.ndarray, groups: np.ndarray, seed: int, n_folds: int = 5):
-    """Standardised L2 logistic regression; C chosen by grouped CV on log loss."""
+    """Standardised L2 logistic regression; C chosen by grouped CV on log loss.
+
+    The fit is deterministic, and the evaluation refits the same calibration data many times, so
+    models are cached by the content of their inputs. Callers must not modify the returned model.
+    """
+    key = _fingerprint(X, y, groups, seed, n_folds)
+    if key not in _FITS:
+        _FITS[key] = _fit_logreg(X, y, groups, n_folds)
+    return _FITS[key]
+
+
+def _fit_logreg(X: np.ndarray, y: np.ndarray, groups: np.ndarray, n_folds: int):
     if len(np.unique(y)) < 2:
         return ConstantModel(float(np.mean(y)))
     n_folds = min(n_folds, len(np.unique(groups)))

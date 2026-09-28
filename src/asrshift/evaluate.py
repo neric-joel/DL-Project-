@@ -63,10 +63,6 @@ def _extra(d: pd.DataFrame) -> dict:
     return out
 
 
-def _take(extra: dict, ix: np.ndarray) -> dict:
-    return {k: v[ix] for k, v in extra.items()}
-
-
 def _rate(num: np.ndarray, den: np.ndarray):
     return lambda ix: float(num[ix].sum() / den[ix].sum()) if den[ix].sum() else float("nan")
 
@@ -157,6 +153,7 @@ def evaluate_label(df: pd.DataFrame, label: str, n_boot: int, seed: int, eval_se
         y = d[label].to_numpy(int)
         errors, n_ref = d["errors"].to_numpy(float), d["n_ref"].to_numpy(float)
         extra = _extra(d)
+        yf, crit = y.astype(float), extra.get("crit_err")
         bs = M.ClusterBootstrap(d["group_id"].to_numpy(), n_boot, seed)
         scores[ev] = {}
         for pol in policies["turn" if "turn" in ev else "window"]:
@@ -202,10 +199,9 @@ def evaluate_label(df: pd.DataFrame, label: str, n_boot: int, seed: int, eval_se
                 row = {"eval": ev, "policy": pol.name, "point": name, "target": target, "threshold": thr,
                        "feasible": bool(np.isfinite(thr)),
                        "note": P4_NOTE if pol.name == "P4" and not name.startswith("plugin") else "", **o}
-                for k in ("review_rate", "err_caught", "accepted_err_rate", "accepted_crit_err_rate"):
-                    row[f"{k}_lo"], row[f"{k}_hi"] = bs.interval(
-                        lambda ix, k=k, dec=decide: M.operating_point(dec(ix), y[ix], errors[ix], n_ref[ix],
-                                                                      _take(extra, ix)).get(k, np.nan))
+                cis = bs.intervals(lambda ix, dec=decide: M.headline(dec(ix), yf[ix], None if crit is None else crit[ix]))
+                for k, (lo, hi) in zip(M.HEADLINE, cis):
+                    row[f"{k}_lo"], row[f"{k}_hi"] = lo, hi
                 ops.append(row)
         if with_target and not ev.startswith("eka"):
             p = crossfit_ceiling(d, label, seed)

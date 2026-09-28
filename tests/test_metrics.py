@@ -116,3 +116,33 @@ def test_cluster_bootstrap_resamples_whole_groups():
             assert (picked == g).sum() % (groups == g).sum() == 0
     lo, hi = bs.interval(lambda ix: float(len(ix)))
     assert lo <= hi
+
+
+def test_auroc_matches_sklearn_with_ties():
+    from sklearn.metrics import roc_auc_score
+
+    rng = np.random.default_rng(1)
+    for _ in range(20):
+        y = rng.integers(0, 2, 300)
+        r = np.round(rng.random(300), 1)  # many ties
+        assert M.auroc(r, y) == pytest.approx(roc_auc_score(y, r), abs=1e-12)
+    assert np.isnan(M.auroc(np.array([0.1, 0.2]), np.array([1, 1])))
+
+
+def test_headline_matches_operating_point():
+    rng = np.random.default_rng(2)
+    review, y = rng.random(200) < 0.3, rng.integers(0, 2, 200)
+    crit = rng.integers(0, 2, 200).astype(float)
+    op = M.operating_point(review, y, np.ones(200), np.ones(200), {"crit_err": crit})
+    assert M.headline(review, y.astype(float), crit) == tuple(op[k] for k in M.HEADLINE)
+
+
+def test_bootstrap_intervals_match_interval_with_and_without_cache():
+    groups = np.repeat(np.arange(15), 4)
+    x = np.random.default_rng(3).random(len(groups))
+    stats = (lambda ix: float(x[ix].mean()), lambda ix: float(np.median(x[ix])))
+    cached = M.ClusterBootstrap(groups, n_boot=100, seed=0)
+    plain = M.ClusterBootstrap(groups, n_boot=100, seed=0)
+    plain._cacheable = False
+    joint = cached.intervals(lambda ix: tuple(f(ix) for f in stats))
+    assert joint == [plain.interval(f) for f in stats] == [cached.interval(f) for f in stats]

@@ -8,7 +8,7 @@ Arizona State University, Fall 2026.
 
 ## Findings in brief
 
-Whisper-small, 11,213 transcripts. The review policy was calibrated on Eka (Indian-English medical
+Whisper-small, 11,195 transcripts. The review policy was calibrated on Eka (Indian-English medical
 clips, median 5 words) and applied unchanged to PriMock57 consultations cut into 30-second windows
 (median 67 words, 4.8 speaker turns). Every number below comes from [results/SUMMARY.md](results/SUMMARY.md).
 Intervals are 95% cluster-bootstrap intervals, and hypothesis tests are one-sided and Holm-adjusted.
@@ -126,7 +126,8 @@ was scored are in **[docs/PROTOCOL.md](docs/PROTOCOL.md)**. Data handling is in
 
 ## Reproducing the results
 
-Tested on Windows 11 (RTX 3050 Laptop 4 GB) and Linux (Colab T4) with Python 3.12.
+Tested on Windows 11 (RTX 3050 Laptop 4 GB, Python 3.12), in Docker (Python 3.12 and 3.13) and on
+Google Colab (T4, Python 3.13).
 
 **1. From the committed per-unit results (minutes, no GPU, no downloads).**
 Every table, figure and `results/SUMMARY.md` is rebuilt from `results/units/`.
@@ -145,9 +146,9 @@ asrshift evaluate && asrshift figures && asrshift report
 pip install -r requirements-gpu.txt   # CUDA 12 cuBLAS for ctranslate2 (not needed on Colab)
 asrshift download     # Eka parquet shards (HF Hub) + PriMock57 audio (GitHub LFS), ~2.1 GB, pinned revisions
 asrshift prepare      # units, speaker-disjoint Eka split, consultation split
-asrshift infer        # whisper-small on 11,213 units; resumable
+asrshift infer        # whisper-small on 11,195 units; resumable
 asrshift score        # WER, critical tokens, entities, labels, features
-asrshift evaluate     # policies, operating points, bootstrap, hypothesis tests (~15 min on CPU)
+asrshift evaluate     # policies, operating points, bootstrap, hypothesis tests (~4 min on CPU)
 asrshift figures
 asrshift report
 ```
@@ -156,7 +157,7 @@ asrshift report
 --compute-type int8` works but takes several hours.
 
 **3. Google Colab.** [notebooks/reproduce_colab.ipynb](notebooks/reproduce_colab.ipynb) runs route 1 in
-a couple of minutes, and route 2 on a free T4.
+about five minutes, and route 2 on a free T4.
 
 **4. Docker (CPU).**
 
