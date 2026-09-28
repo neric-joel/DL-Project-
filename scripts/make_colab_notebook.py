@@ -90,14 +90,16 @@ everything under `results/`. Each step is resumable if the runtime disconnects.
     md("""
 ## Part C (optional): a larger model
 
-The proposal's stretch goal: does whisper-large-v3-turbo's confidence travel better? Declare the run in
-`docs/PROTOCOL.md` before scoring it. It takes about 2 to 3 hours on a T4, and each step is resumable.
+The proposal's stretch goal: does whisper-large-v3-turbo's confidence travel better? The repository
+already contains this run (`results/SUMMARY_large-v3-turbo.md`, declared in protocol amendment 5). To
+reproduce it from audio, allow about 2 to 3 hours on a T4. Each step is resumable.
 """),
     code("""
-TURBO = "mobiuslabsgmbh/faster-whisper-large-v3-turbo"
-!asrshift infer --model {TURBO}
-!asrshift score --model {TURBO}
-!asrshift evaluate --model {TURBO}
+# pinned model revision and identical protocol, see configs/large-v3-turbo.yaml
+!asrshift --config configs/large-v3-turbo.yaml infer
+!asrshift --config configs/large-v3-turbo.yaml score
+!asrshift --config configs/large-v3-turbo.yaml evaluate
+!asrshift --config configs/large-v3-turbo.yaml report
 """),
     md("## One transcript, end to end"),
     code("""

@@ -13,7 +13,8 @@ const ICON_ACCEPT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.
 const ICON_WARN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l10 18H2z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M12 10v5M12 18v.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
 
 const $ = (s, el = document) => el.querySelector(s);
-const pct = (x, d = 0) => (x == null || Number.isNaN(x) ? "—" : `${(100 * x).toFixed(d)}%`);
+// whole percents, but one decimal below 10% so that 0.3% does not read as 0%
+const pct = (x, d) => (x == null || Number.isNaN(x) ? "—" : `${(100 * x).toFixed(d ?? (Math.abs(x) < 0.1 && x !== 0 ? 1 : 0))}%`);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
 async function api(path, opts) {
