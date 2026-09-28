@@ -29,8 +29,11 @@ This notebook reproduces the study in [{REPO}]({REPO}) on Google Colab.
 For Part B choose *Runtime → Change runtime type → T4 GPU* first.
 """),
     code(f"""
-!git clone -q {REPO} asrshift
-%cd asrshift
+# safe to re-run: clones once, then just updates
+%cd /content
+![ -d asrshift ] || git clone -q {REPO} asrshift
+%cd /content/asrshift
+!git pull -q
 !pip install -q -e .
 # make the package importable in this kernel without a restart (re-run this cell after a restart)
 import sys; sys.path.insert(0, "/content/asrshift/src")

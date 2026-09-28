@@ -7,7 +7,7 @@ name = "asrshift"
 version = "0.1.0"
 description = "Does an ASR selective-review policy calibrated on short medical clips stay reliable on doctor-patient conversations?"
 readme = "README.md"
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.10"
 license = { text = "MIT" }
 dependencies = [
   "faster-whisper==1.2.1",
