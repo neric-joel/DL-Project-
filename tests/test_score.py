@@ -60,6 +60,17 @@ def test_entity_scoring_uses_alignment():
     assert s["n_ent_drugs_correct"] == 0 and s["n_ent_advices_correct"] == 1
 
 
+def test_entity_mapped_to_annotated_occurrence_and_deduplicated():
+    text = "fever today and no fever yesterday"
+    # annotated span is the second "fever" (offset 19); listed twice, counted once
+    ents = json.dumps([["fever", "clinical_findings", [[19, 24]]], ["fever", "clinical_findings", [[19, 24]]]])
+    ref = scoring_tokens(text, reference=True)
+    hyp = scoring_tokens("fever today and no favour yesterday")
+    a = align(ref, hyp)
+    s = entity_scores(ents, ref, a.ref_status, hyp, text)
+    assert s["n_ent"] == 1 and s["n_ent_correct"] == 0
+
+
 def test_term_matcher_longest_match_and_scoring():
     import pandas as pd
 

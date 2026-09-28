@@ -118,7 +118,9 @@ def build_windows(utts: pd.DataFrame, max_window_s: float, pad_s: float, duratio
             start = max(0.0, s0 - min(pad_s, (s0 - prev_end) / 2, room))
             end = min(total, e0 + min(pad_s, (next_start - e0) / 2, room))
             us = sorted((u for b in w for u in b["utts"]), key=lambda u: (u.start, u.role))
-            reference = " ".join(u.text for u in us)
+            # one utterance per line: the scorer normalises each line on its own, so numbers from
+            # different utterances are never merged
+            reference = "\n".join(u.text for u in us)
             if sum(u.n_ref_words for u in us) == 0:
                 continue
             roles = [u.role for u in us]

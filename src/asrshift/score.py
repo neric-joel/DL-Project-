@@ -31,7 +31,7 @@ NUMBER_WORDS = frozenset({"once", "twice", "thrice", "half", "od", "bd", "tds", 
 ONE_CONTEXT = frozenset({
     "mg", "mcg", "ml", "kg", "g", "gram", "grams", "tablet", "tablets", "capsule", "capsules", "puff",
     "puffs", "drop", "drops", "dose", "doses", "day", "days", "week", "weeks", "month", "months",
-    "year", "years", "hour", "hours", "minute", "minutes", "time", "times", "daily", "or", "to",
+    "year", "years", "hour", "hours", "minute", "minutes", "time", "times", "daily",
 })
 
 
@@ -56,9 +56,10 @@ def units_path(model: str):
 
 
 def words_path(model: str):
-    """Word-level table: the full local one if present, else the compact committed copy."""
-    local = INTERIM_DIR / f"words_{model.replace('/', '_')}.parquet"
-    return local if local.exists() else RESULTS_DIR / "units" / f"words_{model.replace('/', '_')}.parquet"
+    """Word-level table used by evaluation: the committed copy, so every route (local, Docker, Colab)
+    evaluates exactly the same numbers. Falls back to the local intermediate file."""
+    committed = RESULTS_DIR / "units" / f"words_{model.replace('/', '_')}.parquet"
+    return committed if committed.exists() else INTERIM_DIR / f"words_{model.replace('/', '_')}.parquet"
 
 
 def _find(seq: list[str], sub: list[str], occurrence: int) -> int:
@@ -78,28 +79,37 @@ def _contains(seq: list[str], sub: list[str]) -> bool:
     return _find(seq, sub, 0) >= 0
 
 
-def entity_scores(raw_entities: str, ref: list[str], ref_status: list[str], hyp: list[str]) -> dict:
+def _occurrences(seq: list[str], sub: list[str]) -> list[int]:
+    return [i for i in range(len(seq) - len(sub) + 1) if seq[i:i + len(sub)] == sub] if sub else []
+
+
+def entity_scores(raw_entities: str, ref: list[str], ref_status: list[str], hyp: list[str],
+                  ref_text: str = "") -> dict:
     """Eka entities: correct if all of the entity's reference tokens are aligned as correct.
 
-    The entity is located in the normalised reference by its occurrence rank among entities with
-    the same normalised text. If it cannot be located (normalisation can merge it with neighbouring
-    words), we fall back to checking that its tokens appear contiguously in the hypothesis.
+    Duplicate annotations (same text and span) are counted once. Each entity is located in the
+    normalised reference at the occurrence nearest to its annotated character offset (the number of
+    normalised tokens before that offset), and no occurrence is used twice. An entity that cannot be
+    located in the normalised reference (normalisation can merge it with neighbouring words) is not
+    scored; it is counted in ``n_ent_unmapped`` instead.
     """
     out: dict = {"n_ent": 0, "n_ent_correct": 0, "n_ent_unmapped": 0}
-    rank: dict[tuple, int] = {}
+    used: set[int] = set()
     for ent in data_eka.parse_entities(raw_entities):
         etoks = collapse_repeats(tokens(ent["text"]))[0]
         if not etoks:
             continue
-        key = tuple(etoks)
-        k = rank.get(key, 0)
-        rank[key] = k + 1
-        pos = _find(ref, etoks, k)
-        if pos >= 0:
-            ok = all(s == "C" for s in ref_status[pos:pos + len(etoks)])
-        else:
+        cands = [p for p in _occurrences(ref, etoks) if p not in used]
+        if not cands:
             out["n_ent_unmapped"] += 1
-            ok = _contains(hyp, etoks)
+            continue
+        if ent["start"] is not None and ref_text:
+            expected = len(tokens(ref_text[: ent["start"]]))
+            pos = min(cands, key=lambda p: (abs(p - expected), p))
+        else:
+            pos = cands[0]
+        used.add(pos)
+        ok = all(s == "C" for s in ref_status[pos:pos + len(etoks)])
         t = ent["type"]
         out["n_ent"] += 1
         out["n_ent_correct"] += int(ok)
@@ -160,7 +170,7 @@ def score_unit(row: dict, rec: dict, lexicon: pd.DataFrame | None = None) -> tup
     }
     out.update(_critical(ref, a.ref_status, hyp, a.hyp_status))
     if row["dataset"] == "eka":
-        out.update(entity_scores(row.get("medical_entities") or "[]", ref, a.ref_status, hyp))
+        out.update(entity_scores(row.get("medical_entities") or "[]", ref, a.ref_status, hyp, row["reference"]))
     if lexicon is not None:  # the same lexicon and matcher on both datasets (shared vocabulary)
         out.update(terms.term_scores(ref, a.ref_status, lexicon))
     out.update(unit_features(rec))
@@ -214,17 +224,19 @@ def _export(df: pd.DataFrame, words: pd.DataFrame, model: str) -> None:
     out = RESULTS_DIR / "units"
     out.mkdir(parents=True, exist_ok=True)
     tag = model.replace("/", "_")
-    df[keep].to_csv(out / f"units_{tag}.csv.gz", index=False, float_format="%.6g")
+    df[keep].to_csv(out / f"units_{tag}.csv.gz", index=False, float_format="%.10g")
     compact = words[["unit_id", "probability", "correct", "critical"]].astype(
         {"probability": "float32", "correct": "int8", "critical": "int8"})
     compact.to_parquet(out / f"words_{tag}.parquet", index=False, compression="zstd")
 
 
 def load(model: str) -> pd.DataFrame:
-    p = units_path(model)
-    if p.exists():
-        return pd.read_parquet(p)
-    return pd.read_csv(RESULTS_DIR / "units" / f"units_{model.replace('/', '_')}.csv.gz")
+    """Per-unit table used by evaluation: the committed CSV (identical inputs on every route), else the
+    local parquet intermediate."""
+    committed = RESULTS_DIR / "units" / f"units_{model.replace('/', '_')}.csv.gz"
+    if committed.exists():
+        return pd.read_csv(committed, low_memory=False)
+    return pd.read_parquet(units_path(model))
 
 
 def overview(df: pd.DataFrame) -> pd.DataFrame:

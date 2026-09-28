@@ -35,6 +35,18 @@ def test_inaudible_speech_is_a_wildcard_and_unknown_tags_fail_loudly():
 
     with pytest.raises(ValueError):
         reference_tokens("a <NEWTAG b")
+    with pytest.raises(ValueError):
+        reference_tokens("a <LAUGH/> b")  # well-formed but unknown: must not be dropped silently
+
+
+def test_numbers_are_not_fused_across_sentences():
+    assert tokens("I am 25. 3 days ago it started.") == ["i", "am", "25", "3", "days", "ago", "it", "started"]
+    assert tokens("Take 12.5 mg") == ["take", "12.5", "mg"]
+    assert scoring_tokens("and I'm twenty six.\nTwenty six, OK.", reference=True) == ["and", "i", "am", "26", "okay"]
+    assert scoring_tokens("Seven.\nSeven.", reference=True) == ["7"]
+    assert tokens("two, three days") == ["2", "3", "days"]
+    assert tokens("Dolo 650 three times a day") == ["dolo", "650", "3", "times", "a", "day"]
+    assert tokens("twenty six") == ["26"] and tokens("1,000 patients") == ["1000", "patients"]
 
 
 def test_spelling_variants_are_merged_on_both_sides():

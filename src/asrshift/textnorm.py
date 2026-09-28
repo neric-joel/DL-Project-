@@ -22,6 +22,7 @@ WILDCARD = "<*>"
 
 _UNIN = re.compile(r"<\s*(?:UNIN|INAUDIBLE_SPEECH)\s*/?\s*>", re.IGNORECASE)
 _OTHER_TAGS = re.compile(r"</?\s*[A-Za-z_]+\s*/?\s*>")
+_TAG_NAME = re.compile(r"[<>/\s]")
 _ACRONYM = re.compile(r"\b((?:[A-Za-z]\.){2,})")
 _OK = re.compile(r"\b(?:ok|okey)\b", re.IGNORECASE)
 _ALRIGHT = re.compile(r"\balright\b", re.IGNORECASE)
@@ -51,11 +52,26 @@ _UNITS = {
 }
 
 
+# Whisper's number normaliser merges adjacent number words regardless of punctuation or who spoke
+# them ("twenty six. Twenty six, OK." -> "2626", "Dolo 650 three times" -> "653"). So text is
+# normalised piece by piece: pieces end at a line break (the utterance separator in window
+# references), at clause punctuation followed by a space, and between a digit and a spelled-out
+# number. Applied to reference and hypothesis alike. "1,000" (no space after the comma) is untouched.
+_NUMBER_WORD = (r"zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|"
+                r"fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|"
+                r"eighty|ninety|hundred|thousand")
+_PIECE = re.compile(rf"\n|(?<=[.?!;:,])\s+|(?<=\d)\s+(?=(?:{_NUMBER_WORD})\b)", re.IGNORECASE)
+
+
 def normalize(text: str) -> str:
-    """Whisper English normalisation of plain text (no tags), plus dosage-unit canonicalisation."""
+    """Whisper English normalisation of plain text (no tags), piece by piece, plus dosage-unit
+    canonicalisation."""
     if not text:
         return ""
-    words = _normalizer()(_variants(text)).split()
+    words = []
+    for piece in _PIECE.split(_variants(text)):
+        if piece and piece.strip():
+            words.extend(_normalizer()(piece).split())
     return " ".join(_UNITS.get(w, w) for w in words)
 
 
@@ -64,8 +80,9 @@ def tokens(text: str) -> list[str]:
 
 
 def strip_tags(text: str) -> str:
-    """Remove all transcriber tags, keeping the words inside them. ``<UNIN/>`` is dropped."""
-    return re.sub(r"\s+", " ", _OTHER_TAGS.sub(" ", _UNIN.sub(" ", text))).strip()
+    """Remove all transcriber tags, keeping the words inside them. ``<UNIN/>`` is dropped. Line
+    breaks (utterance separators) are kept."""
+    return re.sub(r"[ \t]+", " ", _OTHER_TAGS.sub(" ", _UNIN.sub(" ", text))).strip()
 
 
 def reference_tokens(text: str) -> list[str]:
@@ -78,9 +95,10 @@ def reference_tokens(text: str) -> list[str]:
     for i, piece in enumerate(pieces):
         if i > 0 and (not out or out[-1] != WILDCARD):
             out.append(WILDCARD)
+        unknown = [t for t in _OTHER_TAGS.findall(piece) if _TAG_NAME.sub("", t).upper() != "UNSURE"]
         cleaned = _OTHER_TAGS.sub(" ", piece)
-        if "<" in cleaned:
-            raise ValueError(f"unhandled transcriber tag in reference: {cleaned!r}")
+        if unknown or "<" in cleaned:
+            raise ValueError(f"unhandled transcriber tag in reference: {unknown or cleaned!r}")
         out.extend(tokens(cleaned))
     return out
 

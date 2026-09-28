@@ -90,10 +90,14 @@ def split(df: pd.DataFrame, fractions: dict[str, float], seed: int) -> pd.DataFr
 
 
 def parse_entities(raw: str) -> list[dict]:
-    """``[[text, type, [[start, end], ...]], ...]`` -> list of {text, type, start, end}."""
-    out = []
+    """``[[text, type, [[start, end], ...]], ...]`` -> list of {text, type, start, end}, without
+    duplicate annotations (same text, type and span)."""
+    out, seen = [], set()
     for text, etype, spans in json.loads(raw or "[]"):
         for start, end in spans or [[None, None]]:
+            if (text, etype, start, end) in seen:
+                continue
+            seen.add((text, etype, start, end))
             out.append({"text": text, "type": etype, "start": start, "end": end})
     out.sort(key=lambda e: (e["start"] is None, e["start"] or 0))
     return out

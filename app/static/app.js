@@ -1,6 +1,6 @@
 "use strict";
 
-const state = { eval: "eka_test", policy: "P3", point: "budget_0.10", show: "all", selected: null, meta: null };
+const state = { eval: "eka_test", policy: "P3", point: "budget_0.10", show: "all", selected: null, meta: null, seq: 0, detailSeq: 0, live: false };
 const DOTS = { eka_test: "var(--eka)", pm_turn_test: "var(--turn)", pm_window_test: "var(--win)" };
 const FILTERS = {
   all: "All",
@@ -41,7 +41,7 @@ function buildSeg(id, options, key, decorate) {
     b.setAttribute("role", "radio");
     b.dataset.value = value;
     b.innerHTML = decorate ? decorate(value, label) : esc(label);
-    b.addEventListener("click", () => { state[key] = value; fixSelection(); refresh(); });
+    b.addEventListener("click", () => { state[key] = value; fixSelection(key); refresh().catch(showError); });
     root.appendChild(b);
   }
 }
@@ -57,12 +57,18 @@ function syncSegs() {
   }
 }
 
-function fixSelection() {
-  if (!available(state.eval, state.policy, state.point)) {
-    const pol = Object.keys(state.meta.policies).find((p) => available(state.eval, p, state.point)) || "P3";
-    state.policy = pol;
-    if (!available(state.eval, state.policy, state.point)) state.point = "budget_0.10";
+// Keep the control the user just changed; adjust the other one if the combination does not exist
+// (e.g. P4 is not defined on Eka, and the plug-in rule needs probabilities, which P1 does not give).
+function fixSelection(changed) {
+  if (available(state.eval, state.policy, state.point)) return;
+  const points = Object.keys(state.meta.points);
+  const policies = Object.keys(state.meta.policies);
+  if (changed !== "point") {
+    const pt = points.find((p) => available(state.eval, state.policy, p));
+    if (pt) { state.point = pt; return; }
   }
+  state.policy = policies.find((p) => available(state.eval, p, state.point)) || "P3";
+  if (!available(state.eval, state.policy, state.point)) state.point = "budget_0.10";
 }
 
 function kpi(id, value, sub, alert = false) {
@@ -72,11 +78,18 @@ function kpi(id, value, sub, alert = false) {
   el.classList.toggle("alert", alert);
 }
 
+function showError(e) {
+  $("#note").innerHTML = `<span class="flag" role="alert">${ICON_WARN} Could not load this view: ${esc(e.message)}</span>`;
+}
+
 async function refresh() {
   syncSegs();
-  const q = `eval_set=${state.eval}&policy=${state.policy}&point=${state.point}`;
-  const [s, queue] = await Promise.all([api(`/api/summary?${q}`), api(`/api/queue?${q}&show=${state.show}`)]);
+  const seq = ++state.seq;
+  const q = new URLSearchParams({ eval_set: state.eval, policy: state.policy, point: state.point });
+  const [s, queue] = await Promise.all([api(`/api/summary?${q}`), api(`/api/queue?${q}&show=${encodeURIComponent(state.show)}`)]);
+  if (seq !== state.seq) return;  // a newer selection is already on its way
 
+  $("#note").textContent = s.feasible ? s.note : "No threshold meets this target on the tuning data, so every transcript goes to review.";
   const drift = s.promised_review != null && Math.abs(s.review_rate - s.promised_review) > 0.03;
   kpi("kpi-review", pct(s.review_rate),
     s.promised_review != null
@@ -100,18 +113,24 @@ async function refresh() {
       <td class="txt" title="${esc(r.hypothesis)}">${esc(r.hypothesis) || "<em>(empty)</em>"}</td>
     </tr>`).join("");
   for (const tr of tbody.children) {
-    const open = () => select(tr.dataset.id);
+    const open = () => select(tr.dataset.id).catch(showError);
     tr.addEventListener("click", open);
     tr.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } });
   }
   $("#queue-foot").textContent = `${queue.total.toLocaleString()} transcripts${queue.total > queue.rows.length ? `, showing ${queue.rows.length}` : ""}.`;
-  if (state.selected) renderDetail(state.selected);
+  if (state.selected && !state.live) renderDetail(state.selected);
 }
 
 async function select(id) {
+  if (state.live) return;  // keep the in-flight live transcription on screen
   state.selected = id;
   for (const tr of $("#rows").children) tr.setAttribute("aria-selected", String(tr.dataset.id === id));
   await renderDetail(id);
+}
+
+function clearDetail() {
+  state.selected = null;
+  $("#detail").innerHTML = `<div class="empty"><p>Select a transcript to hear the audio, see what Whisper got wrong, and how each policy scored it.</p></div>`;
 }
 
 function renderDiff(ops) {
@@ -131,19 +150,26 @@ function renderWords(words) {
 
 function renderRisks(risks) {
   const names = state.meta.policies;
-  return Object.entries(risks).map(([pol, r]) => `
+  return Object.entries(risks).map(([pol, r]) => {
+    const thr = r.threshold == null ? "none (every transcript is reviewed)" : r.threshold.toFixed(2);
+    return `
     <div class="risk-row">
-      <span>${esc(names[pol] || pol)}</span>
-      <div class="risk-track" role="img" aria-label="risk ${r.risk.toFixed(2)}, threshold ${r.threshold.toFixed(2)}">
+      <span>${esc(r.label || names[pol] || pol)}</span>
+      <div class="risk-track" role="img" aria-label="risk ${r.risk.toFixed(2)}, threshold ${thr}">
         <div class="risk-fill" style="width:${(Math.min(1, Math.max(0, r.risk)) * 100).toFixed(1)}%"></div>
-        ${Number.isFinite(r.threshold) && r.threshold <= 1 ? `<div class="risk-thr" style="left:${(Math.max(0, r.threshold) * 100).toFixed(1)}%" title="threshold"></div>` : ""}
+        ${r.threshold != null && r.threshold <= 1 ? `<div class="risk-thr" style="left:${(Math.max(0, r.threshold) * 100).toFixed(1)}%" title="threshold ${thr}"></div>` : ""}
       </div>
       <span>${pill(r.decision)}</span>
-    </div>`).join("");
+    </div>`;
+  }).join("");
 }
 
 async function renderDetail(id) {
-  const u = await api(`/api/unit/${encodeURIComponent(id)}?eval_set=${state.eval}&point=${state.point}`);
+  const seq = ++state.detailSeq;
+  const q = new URLSearchParams({ eval_set: state.eval, point: state.point });
+  const u = await api(`/api/unit/${encodeURIComponent(id)}?${q}`);
+  if (seq !== state.detailSeq) return;
+  if (!u.in_set) { clearDetail(); return; }  // the selected transcript is not in the new evaluation set
   const root = $("#detail");
   root.innerHTML = "";
   root.appendChild($("#tpl-detail").content.cloneNode(true));
@@ -170,19 +196,24 @@ async function live(id, root) {
   const status = $("[data-live-status]", root);
   const out = $("[data-live-out]", root);
   btn.disabled = true;
+  state.live = true;
   status.textContent = "Transcribing on the GPU…";
   try {
     const r = await api(`/api/transcribe/${encodeURIComponent(id)}`, { method: "POST" });
-    const dec = r.decisions;
-    const point = state.point.startsWith("plugin") ? "budget_0.10" : state.point;
-    const rows = Object.entries(r.risk).map(([pol, v]) => `${esc(state.meta.policies[pol] || pol)}: risk <b>${v.toFixed(2)}</b> ${dec[pol] && dec[pol][point] ? pill(dec[pol][point]) : ""}`).join("<br>");
-    out.innerHTML = `<p><b>Fresh transcript</b> (${r.seconds}s for ${r.audio_s.toFixed(1)}s of audio):</p><p>${renderWords(r.words)}</p><p>${rows}</p>`;
+    const point = "budget_0.10";  // the exported policies carry budget and risk-target thresholds
+    const rows = Object.entries(r.risk).filter(([, v]) => v != null).map(([pol, v]) => {
+      const d = r.decisions[pol] && r.decisions[pol][point];
+      return `${esc(state.meta.policies[pol] || pol)}: risk <b>${v.toFixed(2)}</b> ${d ? pill(d) : ""}`;
+    }).join("<br>");
+    out.innerHTML = `<p><b>Fresh transcript</b> (${r.seconds}s for ${r.audio_s.toFixed(1)}s of audio):</p>` +
+      `<p>${renderWords(r.words)}</p><p>${rows}</p><p class="facts">Decisions shown at the 10% review budget.</p>`;
     out.hidden = false;
     status.textContent = "Done.";
   } catch (e) {
     status.textContent = `Could not run Whisper: ${e.message}`;
   } finally {
     btn.disabled = false;
+    state.live = false;
   }
 }
 

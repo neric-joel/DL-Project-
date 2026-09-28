@@ -108,6 +108,7 @@ def build(model: str = "small") -> str:
 
 def run(cfg: dict | None = None, model: str | None = None) -> None:
     model = model or (cfg or {}).get("asr", {}).get("model") or "small"
-    out = RESULTS_DIR / "SUMMARY.md"
+    tag = model.replace("/", "_")
+    out = RESULTS_DIR / ("SUMMARY.md" if tag == "small" else f"SUMMARY_{tag}.md")
     out.write_text(build(model), encoding="utf-8")
     print(f"wrote {out}")

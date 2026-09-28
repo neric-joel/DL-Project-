@@ -27,12 +27,13 @@ os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
 def output_path(model_name: str, shard: str | None = None) -> Path:
     """Main output file, or a per-process shard (two processes never append to one file)."""
     stem = f"asr_{model_name.replace('/', '_')}"
-    return INTERIM_DIR / (f"{stem}.{shard}.jsonl" if shard else f"{stem}.jsonl")
+    return INTERIM_DIR / (f"{stem}.shard-{shard}.jsonl" if shard else f"{stem}.jsonl")
 
 
 def all_output_paths(model_name: str) -> list[Path]:
+    """This model's files only (a model called e.g. "small.en" has its own, non-matching stem)."""
     stem = f"asr_{model_name.replace('/', '_')}"
-    return sorted(INTERIM_DIR.glob(f"{stem}.jsonl")) + sorted(INTERIM_DIR.glob(f"{stem}.*.jsonl"))
+    return sorted(INTERIM_DIR.glob(f"{stem}.jsonl")) + sorted(INTERIM_DIR.glob(f"{stem}.shard-*.jsonl"))
 
 
 def _done_ids(paths: list[Path]) -> set[str]:
@@ -115,6 +116,15 @@ def run(manifest: pd.DataFrame, cfg: dict, out: Path | None = None, limit: int |
     runs.append({**meta, "started": time.strftime("%Y-%m-%d %H:%M:%S"), "units": int(len(todo))})
     meta_path.write_text(json.dumps(runs, indent=2))
 
+    # A run killed mid-write leaves a truncated last line; start the next record on a fresh line so
+    # the truncated one is the only casualty (its unit is redone because it never parsed).
+    if out.exists() and out.stat().st_size:
+        with open(out, "rb") as fb:
+            fb.seek(-1, os.SEEK_END)
+            needs_newline = fb.read(1) != b"\n"
+        if needs_newline:
+            with open(out, "a", encoding="utf-8") as f:
+                f.write("\n")
     with open(out, "a", encoding="utf-8") as f:
         for row in tqdm(todo.to_dict("records"), desc=f"asr {asr_cfg['model']}", mininterval=10):
             audio = load_unit_audio(row)

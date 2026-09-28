@@ -102,7 +102,31 @@ def _op(eval_set: str, policy: str, point: str) -> pd.Series:
 
 
 def _decide(risk: np.ndarray, point: str, threshold: float) -> np.ndarray:
+    """Same rule as asrshift.evaluate: budgets review when risk >= t, risk targets and plug-in when risk > t."""
     return risk >= threshold if point.startswith("budget") else risk > threshold
+
+
+def _num(x):
+    """JSON-safe float: NaN and +-inf (an infeasible threshold) become None."""
+    try:
+        x = float(x)
+    except (TypeError, ValueError):
+        return None
+    return x if np.isfinite(x) else None
+
+
+def _check(eval_set: str, policy: str, point: str) -> None:
+    if eval_set not in EVAL_SETS or policy not in POLICIES or point not in POINTS:
+        raise HTTPException(422, "unknown evaluation set, policy or operating point")
+
+
+def _note(policy: str, point: str) -> str:
+    if policy == "P4" and not point.startswith("plugin"):
+        return ("Platt recalibration keeps P3's ranking, so at this operating point P4 is P3's score with the "
+                "threshold re-tuned on 10 PriMock57 consultations.")
+    if point.startswith("plugin"):
+        return "Plug-in rule: accepts transcripts while the model's own predicted error rate stays at 20%. Needs no labels."
+    return ""
 
 
 @app.get("/api/meta")
@@ -116,31 +140,35 @@ def meta():
 
 @app.get("/api/summary")
 def summary(eval_set: str = Query(...), policy: str = Query(...), point: str = Query(...)):
+    _check(eval_set, policy, point)
     r = _op(eval_set, policy, point)
     d = units()
-    ids = _scores(eval_set)["unit_id"]
-    sub = d.loc[ids]
-    s = _scores(eval_set)[policy].to_numpy(float)
-    review_mask = _decide(s, point, r["threshold"])
+    sc = _scores(eval_set)
+    sub = d.loc[sc["unit_id"]]
+    review_mask = _decide(sc[policy].to_numpy(float), point, r["threshold"])
     acc = ~review_mask
     crit = sub["crit_err"].to_numpy(int)
     return {
         "units": int(len(sub)),
-        "review_rate": float(r["review_rate"]),
-        "review_rate_ci": [float(r["review_rate_lo"]), float(r["review_rate_hi"])],
-        "err_caught": float(r["err_caught"]),
-        "accepted_err_rate": float(r["accepted_err_rate"]),
-        "accepted_err_ci": [float(r["accepted_err_rate_lo"]), float(r["accepted_err_rate_hi"])],
-        "accepted_crit_rate": float(crit[acc].mean()) if acc.any() else None,
-        "promised_review": float(r["target"]) if point.startswith("budget") else None,
-        "promised_accepted_err": float(r["target"]) if not point.startswith("budget") else None,
-        "base_rate": float(sub["err"].mean()),
+        "review_rate": _num(r["review_rate"]),
+        "review_rate_ci": [_num(r["review_rate_lo"]), _num(r["review_rate_hi"])],
+        "err_caught": _num(r["err_caught"]),
+        "accepted_err_rate": _num(r["accepted_err_rate"]),
+        "accepted_err_ci": [_num(r["accepted_err_rate_lo"]), _num(r["accepted_err_rate_hi"])],
+        "accepted_crit_rate": _num(crit[acc].mean()) if acc.any() else None,
+        "promised_review": _num(r["target"]) if point.startswith("budget") else None,
+        "promised_accepted_err": _num(r["target"]) if not point.startswith("budget") else None,
+        "base_rate": _num(sub["err"].mean()),
         "feasible": bool(r["feasible"]),
+        "note": _note(policy, point),
     }
 
 
 @app.get("/api/queue")
-def queue(eval_set: str, policy: str, point: str, show: str = "all", limit: int = 200):
+def queue(eval_set: str, policy: str, point: str, show: str = "all", limit: int = Query(200, ge=1, le=1000)):
+    _check(eval_set, policy, point)
+    if show not in {"all", "review", "accepted_errors", "accepted_critical"}:
+        raise HTTPException(422, "unknown filter")
     r = _op(eval_set, policy, point)
     sc = _scores(eval_set)
     d = units().loc[sc["unit_id"]]
@@ -164,6 +192,7 @@ def queue(eval_set: str, policy: str, point: str, show: str = "all", limit: int 
 
 @app.get("/api/unit/{unit_id}")
 def unit(unit_id: str, eval_set: str, point: str = "budget_0.10"):
+    _check(eval_set, "P3", point)
     d = units()
     if unit_id not in d.index:
         raise HTTPException(404, "unknown unit")
@@ -180,9 +209,12 @@ def unit(unit_id: str, eval_set: str, point: str = "budget_0.10"):
             except HTTPException:
                 continue
             v = float(sc[pol].iloc[0])
-            risks[pol] = {"risk": v, "threshold": float(r["threshold"]),
+            risks[pol] = {"risk": _num(v), "threshold": _num(r["threshold"]), "feasible": bool(r["feasible"]),
+                          "label": ("P4 · P3 score, threshold re-tuned on PriMock57"
+                                    if pol == "P4" and not point.startswith("plugin") else POLICIES[pol]),
                           "decision": "review" if _decide(np.array([v]), point, r["threshold"])[0] else "accept"}
     return {
+        "in_set": not sc.empty,
         "unit_id": unit_id, "dataset": u["dataset"], "subset": u["subset"], "duration": float(u["duration"]),
         "reference": u["reference"], "hypothesis": u["hypothesis"] if isinstance(u["hypothesis"], str) else "",
         "wer": float(u["wer"]), "err": int(u["err"]), "conf": float(u["conf"]),
@@ -208,6 +240,7 @@ def audio(unit_id: str):
 
 
 _model_lock = threading.Lock()
+_decode_lock = threading.Lock()  # one GPU decode at a time
 _model = {}
 
 
@@ -236,13 +269,17 @@ def transcribe(unit_id: str):
         raise HTTPException(404, "audio not available")
     model, cfg = _whisper()
     row = m.loc[unit_id].to_dict() | {"unit_id": unit_id}
-    t0 = time.perf_counter()
-    rec = infer.transcribe(model, load_unit_audio(row), cfg["asr"]["decode"])
-    elapsed = time.perf_counter() - t0
+    audio_arr = load_unit_audio(row)
+    with _decode_lock:
+        t0 = time.perf_counter()
+        rec = infer.transcribe(model, audio_arr, cfg["asr"]["decode"])
+        elapsed = time.perf_counter() - t0
     domain = "eka" if row["dataset"] == "eka" else ("turn" if str(row["subset"]).startswith("turn") else "window")
     verdict = review.assess(rec, domain=domain, model=MODEL)
+    risk = {k: _num(v) for k, v in verdict["risk"].items()}
     return {"text": rec["text"], "seconds": round(elapsed, 2), "audio_s": rec["audio_s"],
-            "words": [{"w": w["word"], "p": round(w["probability"], 3)} for w in rec["words"]], **verdict}
+            "words": [{"w": w["word"], "p": round(w["probability"], 3)} for w in rec["words"]],
+            "confidence": _num(verdict["confidence"]), "risk": risk, "decisions": verdict["decisions"]}
 
 
 @app.post("/api/warmup")

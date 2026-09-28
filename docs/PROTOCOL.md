@@ -306,3 +306,32 @@ lexicon uses only human annotations and reference text, never ASR output or labe
 team. A small local LLM (qwen3.5:2b through Ollama) was tried first as the entity tool and rejected,
 because on a test chunk it copied the prompt's examples and missed most findings. All term results are
 exploratory.
+
+### Amendment 4: 2026-09-28, after inference finished and before any scoring of the full data
+
+An adversarial code review (four reviewers; each defect was reproduced by a second agent before it
+was accepted) found the scoring defects below. All were fixed before `asrshift score` was run on the
+complete outputs. One verifier examined individual PriMock57 *recalibration* units to confirm the
+number-fusion defect. That split is labelled data the protocol lets us use. No test-split result had
+been computed.
+
+1. **Numbers fused across boundaries.** Whisper's normaliser merges adjacent number words whatever
+   the punctuation or speaker ("twenty six." + "Twenty six, OK." → "2626"; "Dolo 650 three times" →
+   "653"). This mostly affected PriMock57 windows and so biased the comparison against the target
+   domain. Text is now normalised piece by piece. A piece ends at an utterance boundary (window
+   references now keep one utterance per line), at clause punctuation followed by a space, and between
+   a digit and a spelled-out number. Both sides are treated the same way.
+2. **Eka entities.** Duplicate annotations are counted once. Each entity is matched to the occurrence
+   nearest its annotated character offset, and no occurrence is used twice. Entities that cannot be
+   located in the normalised reference are no longer scored through a hypothesis-side fallback; they
+   are counted separately (`n_ent_unmapped`).
+3. **Unknown transcriber tags** that are well formed (e.g. `<LAUGH/>`) now stop the scorer, as
+   Amendment 2.1 intended.
+4. **"one" as a number** only before a unit, dose-form or time word, as Amendment 1.2 says ("or"/"to"
+   removed).
+5. **Sensitivity analyses** drop windows from the *test* set only, so the recalibration set, P4 and its
+   thresholds stay identical to the primary analysis. The long-window cut-off is 30 s, which removes all
+   32 over-length windows. The sensitivity table reports whether each operating point was feasible.
+   Added: dropping windows in which a wildcard absorbed more than three words.
+6. **Plug-in intervals** re-estimate the plug-in threshold in every bootstrap replicate, because it is
+   computed from the evaluation stream itself.

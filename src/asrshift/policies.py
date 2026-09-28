@@ -89,6 +89,8 @@ class Platt:
     def fit(self, p: np.ndarray, y: np.ndarray) -> "Platt":
         z = logit(np.clip(p, EPS, 1 - EPS))
         y = np.asarray(y, int)
+        if not self.intercept_only and len(np.unique(y)) < 2:
+            self.fell_back = True  # one class only: the shift runs to its bound
         if not self.intercept_only and len(np.unique(y)) == 2:
             lr = LogisticRegression(C=1e4, max_iter=5000).fit(z.reshape(-1, 1), y)
             a, b = float(lr.coef_[0, 0]), float(lr.intercept_[0])

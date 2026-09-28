@@ -32,7 +32,7 @@ def synthetic_units(seed: int = 0) -> pd.DataFrame:
             "n_neg": n_neg, "n_neg_correct": n_neg, "n_neg_hyp": n_neg, "n_neg_false": 0,
             "n_digit": n_num, "n_digit_correct": n_num, "n_crit_missed": int(errors > 3 and n_num > 0), "n_crit_false": 0,
             "n_ent": 1 if dataset == "eka" else np.nan, "n_ent_correct": float(errors == 0) if dataset == "eka" else np.nan,
-            "wl_wrong": sub_, "wl_tokens": n_ref, "overlap_s": float(rng.random() < 0.3), **f,
+            "wl_wrong": sub_, "wl_tokens": n_ref, "overlap_s": float(rng.random() < 0.3), "wild_excess": 0, **f,
         })
 
     for split, n_groups in (("calibration", 25), ("validation", 10), ("test", 15)):
@@ -114,7 +114,7 @@ def test_confirmatory_family_and_diagnostics(result):
     assert {"P3", "P3-conf"} == set(contrib["model"]) and dom["domain_auroc"].between(0, 1).all()
     rob = E.devpool_robustness(res, seed=1)
     assert set(rob["tuned_on"]) == {"validation", "calibration+validation"}
-    s = E.sensitivity(df, "no overlap", ~((df["subset"] == "window") & (df["overlap_s"] > 0)), n_boot=10, seed=1)
+    s = E.sensitivity(df, "no overlap", df["overlap_s"] > 0, n_boot=10, seed=1)
     assert s["windows_test"].iloc[0] < (res["sets"]["pm_window_test"].shape[0])
 
 

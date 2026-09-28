@@ -45,9 +45,12 @@ def _style():
     })
 
 
+_OUT = {"dir": FIGURES_DIR}
+
+
 def _save(fig, name: str):
-    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
-    fig.savefig(FIGURES_DIR / f"{name}.png", dpi=200, bbox_inches="tight")
+    _OUT["dir"].mkdir(parents=True, exist_ok=True)
+    fig.savefig(_OUT["dir"] / f"{name}.png", dpi=200, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -344,6 +347,8 @@ def fig_asr_overview(tables):
 def run(cfg: dict | None = None, model: str | None = None):
     model = (model or (cfg or {}).get("asr", {}).get("model") or "small").replace("/", "_")
     tables = RESULTS_DIR / "tables" / model
+    # the study's model writes to results/figures/, any other model to its own subfolder
+    _OUT["dir"] = FIGURES_DIR if model == "small" else FIGURES_DIR / model
     _style()
     units = None
     us = tables / "err" / "unit_scores.csv.gz"
@@ -362,4 +367,4 @@ def run(cfg: dict | None = None, model: str | None = None):
     fig_feature_shift(tables)
     fig_length_strata(tables)
     fig_null_baseline(tables)
-    print(f"figures written to {FIGURES_DIR}")
+    print(f"figures written to {_OUT['dir']}")

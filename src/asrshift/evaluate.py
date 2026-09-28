@@ -31,7 +31,7 @@ MAIN_BUDGET = 0.10
 EVAL_SETS = ("eka_test", "pm_window_test", "pm_turn_test")
 LENGTH_BINS = ((1, 9), (10, 30), (31, 50), (51, 10_000))
 MATCHED_BIN = (25, 41)
-LONG_WINDOW_S = 30.6
+LONG_WINDOW_S = 30.001  # windows longer than 30 s are the 32 blocks of overlapping speech
 RISK_N_MIN = 30  # a risk-target threshold must accept at least this many tuning units
 RESIDUAL_KEYS = ("sub", "del", "ins", "n_num", "n_num_correct", "n_neg", "n_neg_correct", "crit_err")
 P4_NOTE = "P3 score with thresholds re-tuned on PriMock57 recalibration"
@@ -191,7 +191,12 @@ def evaluate_label(df: pd.DataFrame, label: str, n_boot: int, seed: int, eval_se
             if pol.name in ("P2", "P2-retuned", "P2-rawCR"):
                 points.append(("whisper_rule", ">=", 1.0, None))
             for name, op_, thr, target in points:
-                decide = (lambda ix, t=thr: r[ix] >= t) if op_ == ">=" else (lambda ix, t=thr: r[ix] > t)
+                if name.startswith("plugin"):
+                    # the plug-in threshold is estimated from the evaluation stream itself, so each
+                    # bootstrap replicate re-estimates it
+                    decide = lambda ix, a=target: r[ix] > M.plugin_threshold(r[ix], a)  # noqa: E731
+                else:
+                    decide = (lambda ix, t=thr: r[ix] >= t) if op_ == ">=" else (lambda ix, t=thr: r[ix] > t)
                 all_ix = np.arange(len(d))
                 o = M.operating_point(decide(all_ix), y, errors, n_ref, extra, r if pol.probabilistic else None)
                 row = {"eval": ev, "policy": pol.name, "point": name, "target": target, "threshold": thr,
@@ -660,18 +665,22 @@ def devpool_robustness(res: dict, seed: int) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def sensitivity(df: pd.DataFrame, name: str, keep: pd.Series, n_boot: int, seed: int) -> pd.DataFrame:
-    """Key H1-H3 numbers on a subset of PriMock windows (recalibration and test alike)."""
-    r = evaluate_label(df[keep], "err", n_boot, seed, eval_sets=("pm_window_test",))
+def sensitivity(df: pd.DataFrame, name: str, drop: pd.Series, n_boot: int, seed: int) -> pd.DataFrame:
+    """Key H1-H3 numbers after dropping some PriMock *test* windows. The recalibration set is left
+    whole, so P4 and its thresholds are the same as in the primary analysis."""
+    test_win = (df["subset"] == "window") & (df["split"] == "test")
+    r = evaluate_label(df[~(drop & test_win)], "err", n_boot, seed, eval_sets=("pm_window_test",))
     cal = r["calibration"].set_index("policy")
     ops = r["operating_points"]
     rows = []
     for pol in ("P3", "P3-conf", "P4"):
         row = {"analysis": name, "windows_test": int(len(r["sets"]["pm_window_test"])), "policy": pol,
                "ece": cal.loc[pol, "ece"], "citl": cal.loc[pol, "citl"]}
+        row["recal_windows"] = int(len(r["sets"]["pm_window_recal"]))
         for point in ("budget_0.10", "risk_0.20", "plugin_0.20"):
             o = ops[(ops["policy"] == pol) & (ops["point"] == point)]
             if len(o):
+                row[f"{point}:feasible"] = bool(o["feasible"].iloc[0])
                 row[f"{point}:review_rate"] = o["review_rate"].iloc[0]
                 row[f"{point}:accepted_err_rate"] = o["accepted_err_rate"].iloc[0]
         rows.append(row)
@@ -715,7 +724,9 @@ def _write(tables: dict, out) -> None:
     out.mkdir(parents=True, exist_ok=True)
     for name, t in tables.items():
         if isinstance(t, pd.DataFrame) and not t.empty:
-            t.to_csv(out / f"{name}.csv", index=False, float_format="%.5g")
+            # thresholds are compared with scores downstream (app, review), so they keep full precision
+            fmt = "%.12g" if name == "operating_points" else "%.5g"
+            t.to_csv(out / f"{name}.csv", index=False, float_format=fmt)
 
 
 def run(cfg: dict, model: str | None = None, n_boot: int | None = None) -> dict:
@@ -744,7 +755,7 @@ def run(cfg: dict, model: str | None = None, n_boot: int | None = None) -> dict:
         "drift_alarm": drift_alarm(res, fs),
     }, out / "err")
     scores = [pd.DataFrame({"unit_id": sets[ev]["unit_id"].to_numpy(), **s}).assign(eval=ev) for ev, s in res["scores"].items()]
-    pd.concat(scores).to_csv(out / "err" / "unit_scores.csv.gz", index=False, float_format="%.6g")
+    pd.concat(scores).to_csv(out / "err" / "unit_scores.csv.gz", index=False, float_format="%.12g")
     summary["labels"]["err"] = {"policy_info": res["policy_info"]}
     contrib, domain = feature_support(res, seed)
     _write({"hypotheses": hypothesis_tests(res, df, model, n_boot, seed),
@@ -753,12 +764,15 @@ def run(cfg: dict, model: str | None = None, n_boot: int | None = None) -> dict:
             "devpool_robustness": devpool_robustness(res, seed)}, out / "err")
 
     # sensitivity analyses on PriMock windows (Amendments 1.5 and 2)
-    is_win = df["subset"] == "window"
     _write({"sensitivity": pd.concat([
-        sensitivity(df, "all windows (primary)", pd.Series(True, index=df.index), small_boot, seed),
-        sensitivity(df, "no window longer than 30.6 s", ~(is_win & (df["duration"] > LONG_WINDOW_S)), small_boot, seed),
-        sensitivity(df, "no overlapping speech in window", ~(is_win & (df["overlap_s"].fillna(0) > 0)), small_boot, seed),
+        sensitivity(df, "all test windows (primary)", pd.Series(False, index=df.index), small_boot, seed),
+        sensitivity(df, "drop windows longer than 30 s", df["duration"] > LONG_WINDOW_S, small_boot, seed),
+        sensitivity(df, "drop windows with overlapping speech", df["overlap_s"].fillna(0) > 0, small_boot, seed),
+        sensitivity(df, "drop windows where a wildcard absorbed > 3 words", df["wild_excess"].fillna(0) > 0,
+                    small_boot, seed),
     ], ignore_index=True)}, out / "err")
+    if not score.words_path(model).exists():
+        print("warning: no word-level table, so H4 and the null baseline are skipped")
 
     # secondary labels (smaller bootstrap)
     for label in ("any_err", "severe_err", "crit_err", "err_c3"):

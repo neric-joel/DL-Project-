@@ -32,8 +32,15 @@ For Part B choose *Runtime → Change runtime type → T4 GPU* first.
 !git clone -q {REPO} asrshift
 %cd asrshift
 !pip install -q -e .
+# make the package importable in this kernel without a restart (re-run this cell after a restart)
+import sys; sys.path.insert(0, "/content/asrshift/src")
 """),
-    md("## Part A: tables and figures from the committed per-unit results"),
+    md("""
+## Part A: tables and figures from the committed per-unit results
+
+Uses 500 bootstrap replicates to stay quick. Point estimates are identical to `results/`, and the
+intervals and p-values differ slightly from the reported 2,000-replicate ones.
+"""),
     code("""
 !asrshift evaluate --n-boot 500
 !asrshift figures
@@ -71,7 +78,7 @@ everything under `results/`. Each step is resumable if the runtime disconnects.
 !asrshift prepare
 """),
     code("""
-# ~50 minutes on a T4. Add `--limit 200` for a quick end-to-end smoke test.
+# ~50 minutes on a T4, resumable. Part A's committed results are overwritten by the steps below.
 !asrshift infer
 """),
     code("""
@@ -79,6 +86,18 @@ everything under `results/`. Each step is resumable if the runtime disconnects.
 !asrshift evaluate
 !asrshift figures
 !asrshift report
+"""),
+    md("""
+## Part C (optional): a larger model
+
+The proposal's stretch goal: does whisper-large-v3-turbo's confidence travel better? Declare the run in
+`docs/PROTOCOL.md` before scoring it. It takes about 2 to 3 hours on a T4, and each step is resumable.
+"""),
+    code("""
+TURBO = "mobiuslabsgmbh/faster-whisper-large-v3-turbo"
+!asrshift infer --model {TURBO}
+!asrshift score --model {TURBO}
+!asrshift evaluate --model {TURBO}
 """),
     md("## One transcript, end to end"),
     code("""

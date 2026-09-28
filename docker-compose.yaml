@@ -9,6 +9,7 @@ services:
   # Full pipeline on CPU: downloads both datasets (~2.1 GB) into ./data and runs Whisper with int8.
   # Slow on CPU (hours); the GPU path in the README is the intended way to run inference.
   pipeline:
+    build: .
     image: asrshift:latest
     command: >
       sh -c "asrshift download && asrshift prepare &&
