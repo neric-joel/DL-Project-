@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from asrshift import data_eka, infer, prepare
+from asrshift import data_eka, infer, prepare, terms
 from asrshift.align import align
 from asrshift.features import unit_features
 from asrshift.paths import INTERIM_DIR, RESULTS_DIR
@@ -56,7 +56,9 @@ def units_path(model: str):
 
 
 def words_path(model: str):
-    return INTERIM_DIR / f"words_{model.replace('/', '_')}.parquet"
+    """Word-level table: the full local one if present, else the compact committed copy."""
+    local = INTERIM_DIR / f"words_{model.replace('/', '_')}.parquet"
+    return local if local.exists() else RESULTS_DIR / "units" / f"words_{model.replace('/', '_')}.parquet"
 
 
 def _find(seq: list[str], sub: list[str], occurrence: int) -> int:
@@ -143,7 +145,7 @@ def _word_level(rec: dict, ref: list[str]) -> list[tuple[str, float, str, int]]:
             for j, (i, s) in enumerate(zip(idx, a.hyp_status)) if s != "W"]
 
 
-def score_unit(row: dict, rec: dict) -> tuple[dict, list[tuple[float, int]]]:
+def score_unit(row: dict, rec: dict, lexicon: pd.DataFrame | None = None) -> tuple[dict, list[tuple[float, int]]]:
     ref = scoring_tokens(row["reference"], reference=True)
     hyp = scoring_tokens(rec.get("text", ""))
     a = align(ref, hyp)
@@ -159,6 +161,8 @@ def score_unit(row: dict, rec: dict) -> tuple[dict, list[tuple[float, int]]]:
     out.update(_critical(ref, a.ref_status, hyp, a.hyp_status))
     if row["dataset"] == "eka":
         out.update(entity_scores(row.get("medical_entities") or "[]", ref, a.ref_status, hyp))
+    if lexicon is not None:  # the same lexicon and matcher on both datasets (shared vocabulary)
+        out.update(terms.term_scores(ref, a.ref_status, lexicon))
     out.update(unit_features(rec))
     words = _word_level(rec, ref)
     # agreement check between the per-word (word-level analysis) and whole-text (WER) alignments
@@ -176,11 +180,12 @@ def run(cfg: dict, model: str | None = None) -> pd.DataFrame:
     if missing:
         print(f"warning: {len(missing)} units have no ASR output yet and are skipped")
     rows, word_rows = [], []
+    lexicon = terms.load()
     for row in tqdm(manifest.to_dict("records"), desc="score", mininterval=10):
         if row["unit_id"] not in outputs.index:
             continue
         rec = outputs.loc[row["unit_id"]].to_dict()
-        scored, words = score_unit(row, rec)
+        scored, words = score_unit(row, rec, lexicon)
         if scored["n_ref"] == 0:
             continue
         rows.append({**row, **scored, "decode_s": rec.get("decode_s")})
@@ -195,19 +200,24 @@ def run(cfg: dict, model: str | None = None) -> pd.DataFrame:
         df["ent_err"] = np.where(df["n_ent"].fillna(0) > 0, (df["n_ent_correct"] < df["n_ent"]).astype(float), np.nan)
     df["domain"] = np.where(df["dataset"] == "eka", "eka", "primock57_" + df["subset"].str.replace("turn_.*", "turn", regex=True))
     df.to_parquet(units_path(model), index=False)
-    pd.DataFrame(word_rows, columns=["unit_id", "token", "probability", "status", "correct", "critical"]).to_parquet(
-        words_path(model), index=False)
-    _export(df, model)
+    words = pd.DataFrame(word_rows, columns=["unit_id", "token", "probability", "status", "correct", "critical"])
+    words.to_parquet(INTERIM_DIR / f"words_{model.replace('/', '_')}.parquet", index=False)
+    _export(df, words, model)
     return df
 
 
-def _export(df: pd.DataFrame, model: str) -> None:
-    """Small per-unit table committed with the repo so evaluation can be rerun without inference."""
+def _export(df: pd.DataFrame, words: pd.DataFrame, model: str) -> None:
+    """Compact per-unit and per-word tables committed with the repo, so evaluation, figures and the
+    report can be rerun without the audio or a GPU."""
     private = {"speaker", "group_key"}  # raw speaker IDs (some are e-mail addresses) stay local
     keep = [c for c in df.columns if c not in {"medical_entities", "md5_text", "dropped_reason", "audio_source"} | private]
     out = RESULTS_DIR / "units"
     out.mkdir(parents=True, exist_ok=True)
-    df[keep].to_csv(out / f"units_{model.replace('/', '_')}.csv.gz", index=False, float_format="%.6g")
+    tag = model.replace("/", "_")
+    df[keep].to_csv(out / f"units_{tag}.csv.gz", index=False, float_format="%.6g")
+    compact = words[["unit_id", "probability", "correct", "critical"]].astype(
+        {"probability": "float32", "correct": "int8", "critical": "int8"})
+    compact.to_parquet(out / f"words_{tag}.parquet", index=False, compression="zstd")
 
 
 def load(model: str) -> pd.DataFrame:

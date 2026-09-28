@@ -72,6 +72,39 @@ class Alignment:
         return self.errors / n
 
 
+def ops(a: Alignment) -> list[tuple[str, str | None, str | None]]:
+    """The alignment as an ordered list of (op, reference token, hypothesis token) for display.
+
+    op is C (correct), S (substitution), D (deletion), I (insertion) or W (wildcard; the hypothesis
+    side then holds the absorbed words joined by spaces, or None).
+    """
+    out: list[tuple[str, str | None, str | None]] = []
+    i = j = 0
+    n, m = len(a.ref), len(a.hyp)
+    while i < n or j < m:
+        if j < m and a.hyp_status[j] == "I":
+            out.append(("I", None, a.hyp[j]))
+            j += 1
+        elif i < n and a.ref_status[i] == "W":
+            absorbed = []
+            while j < m and a.hyp_status[j] == "W":
+                absorbed.append(a.hyp[j])
+                j += 1
+            out.append(("W", None, " ".join(absorbed) or None))
+            i += 1
+        elif i < n and a.ref_status[i] == "D":
+            out.append(("D", a.ref[i], None))
+            i += 1
+        elif i < n:
+            k = a.ref_to_hyp[i]
+            out.append((a.ref_status[i], a.ref[i], a.hyp[k]))
+            i, j = i + 1, k + 1
+        else:  # stray absorbed tokens cannot occur, but never loop forever
+            out.append(("I", None, a.hyp[j]))
+            j += 1
+    return out
+
+
 def align(ref: list[str], hyp: list[str]) -> Alignment:
     n, m = len(ref), len(hyp)
     wild = np.array([t == WILDCARD for t in ref], dtype=bool)

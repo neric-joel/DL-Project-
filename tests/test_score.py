@@ -60,6 +60,21 @@ def test_entity_scoring_uses_alignment():
     assert s["n_ent_drugs_correct"] == 0 and s["n_ent_advices_correct"] == 1
 
 
+def test_term_matcher_longest_match_and_scoring():
+    import pandas as pd
+
+    from asrshift.terms import Matcher, term_scores
+
+    lex = pd.DataFrame({"term": ["chest pain", "pain", "blood test"],
+                        "type": ["clinical_findings", "clinical_findings", "diagnostics"]})
+    toks = "i have chest pain and some pain after the blood test".split()
+    assert [h[2] for h in Matcher(lex).find(toks)] == ["chest pain", "pain", "blood test"]
+    status = ["C"] * len(toks)
+    status[3] = "S"  # "pain" in "chest pain" misrecognised
+    s = term_scores(toks, status, lex)
+    assert s["n_term"] == 3 and s["n_term_correct"] == 2 and s["n_term_clinical_findings_correct"] == 1
+
+
 def test_score_unit_end_to_end():
     row = {"reference": "No fever. <UNIN/> Take paracetamol 500 mg.", "dataset": "primock57"}
     rec = {"text": " No fever, um, take paracetamol 500 mg.", "audio_s": 4.0,

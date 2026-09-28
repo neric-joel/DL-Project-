@@ -45,6 +45,25 @@ def test_wildcard_does_not_hide_errors_elsewhere():
     assert a.deletions == 1 and a.ref_status[0] == "D" and a.wer == pytest.approx(1 / 3)
 
 
+def test_ops_cover_every_token_in_order():
+    from asrshift.align import ops
+
+    rng = random.Random(3)
+    vocab = list("abcd") + [WILDCARD]
+    for _ in range(500):
+        ref = [rng.choice(vocab) for _ in range(rng.randint(0, 10))]
+        hyp = [rng.choice("abcd") for _ in range(rng.randint(0, 10))]
+        a = align(ref, hyp)
+        o = ops(a)
+        assert [r for op, r, _ in o if op in "CSD"] == [t for t in ref if t != WILDCARD]
+        assert sum(1 for op, _, _ in o if op == "W") == ref.count(WILDCARD)
+        hyp_out = []
+        for op, _, h in o:
+            if h is not None:
+                hyp_out.extend(h.split(" ") if op == "W" else [h])
+        assert hyp_out == hyp
+
+
 def test_wildcard_runs_are_recorded():
     a = align(["a", WILDCARD, "b", WILDCARD], ["a", "x", "b", "p", "q", "r", "s", "t"])
     assert a.wild_runs == [1, 5] and a.wild_excess(3) == 2 and a.errors == 0

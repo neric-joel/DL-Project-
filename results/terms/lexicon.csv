@@ -1,0 +1,271 @@
+term,type,eka_count,primock_count
+in the morning,advices,1,16
+follow up,advices,2,5
+follow up appointment,advices,1,4
+soft diet,advices,1,4
+reassurance,advices,1,3
+on an empty stomach,advices,1,1
+after food,advices,2,1
+drink more water,advices,1,1
+drink plenty of water,advices,1,1
+pain,clinical_findings,187,175
+headache,clinical_findings,24,76
+cough,clinical_findings,21,57
+allergies,clinical_findings,2,55
+asthma,clinical_findings,31,55
+diarrhea,clinical_findings,11,55
+headaches,clinical_findings,3,53
+vomiting,clinical_findings,11,46
+short of breath,clinical_findings,1,46
+breathing,clinical_findings,2,39
+fever,clinical_findings,43,37
+head,clinical_findings,1,35
+nausea,clinical_findings,13,33
+drinking,clinical_findings,2,31
+infection,clinical_findings,35,30
+eczema,clinical_findings,17,28
+ear,clinical_findings,26,28
+allergic,clinical_findings,1,28
+migraine,clinical_findings,11,27
+rash,clinical_findings,11,27
+swelling,clinical_findings,90,27
+shortness of breath,clinical_findings,2,27
+bowels,clinical_findings,1,26
+diabetes,clinical_findings,76,25
+coughing,clinical_findings,1,25
+cancer,clinical_findings,22,23
+throat,clinical_findings,23,23
+ears,clinical_findings,2,23
+sore throat,clinical_findings,1,22
+migraines,clinical_findings,4,22
+weakness,clinical_findings,3,21
+blood pressure,clinical_findings,107,20
+tingling,clinical_findings,2,20
+dry,clinical_findings,1,20
+eat,clinical_findings,2,20
+chest pain,clinical_findings,8,19
+fit and well,clinical_findings,1,18
+talking,clinical_findings,1,18
+mood,clinical_findings,2,18
+anxiety,clinical_findings,29,17
+allergy,clinical_findings,8,16
+numbness,clinical_findings,3,16
+stroke,clinical_findings,53,14
+nose,clinical_findings,8,14
+high blood pressure,clinical_findings,100,13
+painful,clinical_findings,2,13
+back pain,clinical_findings,5,12
+no vomiting,clinical_findings,1,12
+runny nose,clinical_findings,16,12
+hay fever,clinical_findings,12,12
+rashes,clinical_findings,18,12
+knee,clinical_findings,1,12
+vomited,clinical_findings,2,12
+eyes,clinical_findings,4,11
+heart attack,clinical_findings,47,11
+smoking,clinical_findings,6,11
+eye,clinical_findings,2,11
+past medical history,clinical_findings,3,11
+pains,clinical_findings,1,10
+discomfort,clinical_findings,9,10
+severe,clinical_findings,1,10
+burning,clinical_findings,1,10
+hypertension,clinical_findings,57,9
+pregnancy,clinical_findings,4,9
+bleeding,clinical_findings,7,9
+palpitations,clinical_findings,2,9
+surgery,clinical_findings,1,9
+thyroid,clinical_findings,2,8
+hypothyroidism,clinical_findings,8,8
+dry cough,clinical_findings,2,8
+redness,clinical_findings,15,8
+pregnant,clinical_findings,1,8
+joints,clinical_findings,10,7
+abdominal pain,clinical_findings,12,7
+infections,clinical_findings,66,7
+thinking,clinical_findings,2,7
+weight loss,clinical_findings,4,7
+right hand,clinical_findings,1,7
+wheezing,clinical_findings,9,6
+disease,clinical_findings,3,6
+heart failure,clinical_findings,34,6
+left ear,clinical_findings,2,6
+constipation,clinical_findings,7,6
+lungs,clinical_findings,10,6
+clots,clinical_findings,1,6
+dizziness,clinical_findings,11,5
+shivering,clinical_findings,1,5
+wheeze,clinical_findings,1,5
+tiredness,clinical_findings,1,5
+stiffness,clinical_findings,3,5
+dermatitis,clinical_findings,7,5
+high cholesterol,clinical_findings,2,5
+toes,clinical_findings,1,5
+depression,clinical_findings,26,4
+bacterial infection,clinical_findings,1,4
+diabetic,clinical_findings,2,4
+tia,clinical_findings,1,4
+tinnitus,clinical_findings,9,4
+itching,clinical_findings,38,4
+inflammation,clinical_findings,25,4
+solid,clinical_findings,1,4
+bacteria,clinical_findings,17,4
+smoker,clinical_findings,7,4
+injury,clinical_findings,2,4
+persistent,clinical_findings,1,4
+mucus,clinical_findings,2,4
+breathing difficulties,clinical_findings,1,4
+fatigue,clinical_findings,3,3
+kidney stones,clinical_findings,1,3
+malaria,clinical_findings,6,3
+sneeze,clinical_findings,1,3
+ear pain,clinical_findings,1,3
+loose stools,clinical_findings,1,3
+strokes,clinical_findings,12,3
+cholesterol,clinical_findings,29,3
+lower back pain,clinical_findings,3,3
+drug allergies,clinical_findings,2,3
+osteoarthritis,clinical_findings,13,3
+colds,clinical_findings,1,3
+tumor,clinical_findings,7,3
+type 2 diabetes,clinical_findings,2,3
+mild,clinical_findings,1,3
+cramping,clinical_findings,4,3
+last 2 days,clinical_findings,1,3
+muscle pain,clinical_findings,3,3
+tender,clinical_findings,1,3
+severe headache,clinical_findings,1,2
+tuberculosis,clinical_findings,5,2
+chills,clinical_findings,2,2
+hyperthyroidism,clinical_findings,5,2
+seizure,clinical_findings,2,2
+unstable,clinical_findings,1,2
+acid reflux,clinical_findings,14,2
+anemia,clinical_findings,4,2
+height,clinical_findings,1,2
+no nausea,clinical_findings,1,2
+angina,clinical_findings,25,2
+heartburn,clinical_findings,16,2
+food allergies,clinical_findings,5,2
+menstrual cramps,clinical_findings,3,2
+fits,clinical_findings,14,2
+posture,clinical_findings,1,2
+acid,clinical_findings,12,2
+diseases,clinical_findings,1,2
+viral infection,clinical_findings,3,2
+stone,clinical_findings,2,2
+asthma exacerbation,clinical_findings,1,2
+condition,clinical_findings,1,2
+cramps,clinical_findings,5,2
+kidney,clinical_findings,1,2
+skin rashes,clinical_findings,1,2
+minimal,clinical_findings,1,2
+continuous,clinical_findings,2,2
+sensitivity,clinical_findings,1,2
+reactions,clinical_findings,1,2
+intolerant,clinical_findings,1,2
+tension,clinical_findings,2,2
+loss of appetite,clinical_findings,1,2
+sle,clinical_findings,1,2
+frequency,clinical_findings,1,2
+feeling weak,clinical_findings,1,1
+dengue,clinical_findings,9,1
+sneezing,clinical_findings,17,1
+high fever,clinical_findings,1,1
+fatigued,clinical_findings,1,1
+acidity,clinical_findings,8,1
+acl,clinical_findings,1,1
+pale,clinical_findings,2,1
+running nose,clinical_findings,1,1
+urinary tract infection,clinical_findings,1,1
+scar,clinical_findings,2,1
+pneumonia,clinical_findings,43,1
+pain on swallowing,clinical_findings,1,1
+light headedness,clinical_findings,1,1
+calf pain,clinical_findings,1,1
+increased thirst,clinical_findings,1,1
+hypothyroid,clinical_findings,1,1
+skin problem,clinical_findings,1,1
+non productive cough,clinical_findings,1,1
+hepatitis b,clinical_findings,2,1
+watery stool,clinical_findings,1,1
+difficulty passing urine,clinical_findings,1,1
+soft tissues,clinical_findings,14,1
+heart attacks,clinical_findings,18,1
+heart disease,clinical_findings,33,1
+kidney function,clinical_findings,25,1
+congestion,clinical_findings,12,1
+circulation,clinical_findings,1,1
+indigestion,clinical_findings,5,1
+gas,clinical_findings,2,1
+vaginal bleeding,clinical_findings,2,1
+panic attacks,clinical_findings,5,1
+rheumatoid arthritis,clinical_findings,15,1
+muscle ache,clinical_findings,3,1
+joint pain,clinical_findings,9,1
+anaphylactic reactions,clinical_findings,2,1
+tenderness,clinical_findings,8,1
+period pain,clinical_findings,1,1
+high blood sugar,clinical_findings,11,1
+asymmetry,clinical_findings,1,1
+anaphylaxis,clinical_findings,11,1
+pollen allergy,clinical_findings,4,1
+breast cancer,clinical_findings,5,1
+alcohol intake,clinical_findings,2,1
+blood clots,clinical_findings,10,1
+insidious,clinical_findings,1,1
+pregnancies,clinical_findings,3,1
+neurological conditions,clinical_findings,1,1
+well maintained,clinical_findings,1,1
+gout,clinical_findings,5,1
+arthritis,clinical_findings,5,1
+puncture,clinical_findings,1,1
+liver,clinical_findings,1,1
+painless,clinical_findings,3,1
+severe pain,clinical_findings,3,1
+adverse reaction,clinical_findings,1,1
+tension headache,clinical_findings,1,1
+cystitis,clinical_findings,1,1
+quit,clinical_findings,1,1
+bowel motion,clinical_findings,1,1
+swellings,clinical_findings,1,1
+pumping blood,clinical_findings,1,1
+intubation,clinical_findings,1,1
+lumps,clinical_findings,1,1
+awareness,clinical_findings,1,1
+temperature,diagnostics,2,47
+family history,diagnostics,2,20
+medical history,diagnostics,2,16
+pulse,diagnostics,1,6
+physical examination,diagnostics,9,4
+heart rate,diagnostics,2,2
+neurological examination,diagnostics,1,2
+chest x ray,diagnostics,8,1
+ultrasound,diagnostics,7,1
+bicarbonate,diagnostics,1,1
+crystals,diagnostics,1,1
+alcohol,drugs,24,39
+antibiotics,drugs,6,26
+inhalers,drugs,2,21
+antihistamines,drugs,13,20
+steroids,drugs,12,16
+aspirin,drugs,1,11
+steroid,drugs,6,10
+salbutamol,drugs,9,9
+antihistamine,drugs,1,7
+thyroxine,drugs,13,6
+metformin,drugs,12,6
+cream,drugs,1,6
+hydrocortisone,drugs,2,6
+vitamins,drugs,1,5
+antibiotic,drugs,78,4
+vitamin d,drugs,1,4
+penicillin,drugs,23,4
+no cough,drugs,1,3
+dehydration,drugs,1,2
+cigarettes,drugs,1,2
+gel,drugs,1,1
+amlodipine,drugs,17,1
+acetaminophen,drugs,2,1
+upper respiratory tract infection,drugs,1,1
+prescriptions,drugs,1,1
