@@ -45,3 +45,19 @@ asr:
     condition_on_previous_text: true
     word_timestamps: true
     vad_filter: false
+
+# Word-and-gap verifier (exploratory, Amendment 7; `asrshift verifier`). Weights were fixed before
+# any verifier result was computed: an error costs the weight of its word's category.
+verifier:
+  weights: {critical: 10.0, medical: 5.0, content: 1.0, function: 0.2}
+  # function words = scikit-learn's English stop words plus these fillers, minus negations
+  fillers: [yeah, yes, okay, ok, right, mhm, so, like, well, just, oh, um, uh, hmm, mm]
+  second_model: large-v3-turbo
+  clip_pad_s: 0.6           # audio a reviewer hears before and after a flagged word or gap
+  curve_max_s: 300
+  curve_step_s: 5
+  model: {max_iter: 400, learning_rate: 0.05, max_leaf_nodes: 31, l2_regularization: 1.0,
+          early_stopping: true, validation_fraction: 0.15}
+  # per head, chosen by grouped 5-fold CV (Poisson deviance) on the training splits only (v4)
+  model_words: {max_iter: 800, learning_rate: 0.03, max_leaf_nodes: 31, min_samples_leaf: 100, l2_regularization: 0.0}
+  model_gaps: {max_iter: 400, learning_rate: 0.05, max_leaf_nodes: 15, min_samples_leaf: 20, l2_regularization: 10.0}
