@@ -21,11 +21,16 @@
     }
     return r.json();
   }
+  // saved-transcript model for Replay / Review / Compare (live decoding is always whisper-small)
+  const models = { current: null, list: [{ id: "small", label: "whisper-small", available: true }] };
+  const modelQ = () => (models.current ? `model=${enc(models.current)}` : "");
+  const modelLabel = () => (models.list.find((m) => m.id === models.current) || models.list[0]).label;
   const API = {
-    consultations: () => getJSON(MOCK ? "mock/consultations.json" : "/api/v2/consultations"),
-    payload: (id) => getJSON(MOCK ? `mock/consultation_${id}.json` : `/api/v2/consultation/${enc(id)}?unit=turn`),
+    models: () => getJSON("/api/v2/models"),
+    consultations: () => getJSON(MOCK ? "mock/consultations.json" : `/api/v2/consultations?${modelQ()}`),
+    payload: (id) => getJSON(MOCK ? `mock/consultation_${id}.json` : `/api/v2/consultation/${enc(id)}?unit=turn&${modelQ()}`),
     audioUrl: (id) => (MOCK ? `mock/${id}.mp3` : `/api/v2/consultation/${enc(id)}/audio`),
-    curves: () => getJSON(MOCK ? "mock/curves.json" : "/api/v2/curves"),
+    curves: () => getJSON(MOCK ? "mock/curves.json" : `/api/v2/curves?${modelQ()}`),
     live: (id, second) => (MOCK ? new MockSource(mockPayload, 2.5) : new EventSource(`/api/v2/live/${enc(id)}?second=${second ? 1 : 0}`)),
     async upload(file) {
       const fd = new FormData(); fd.append("file", file);
@@ -752,6 +757,7 @@
     const nf = new Intl.NumberFormat("en");
     const unitName = state.dom === "window" ? "30-s windows" : "speaker turns";
     $("#cmp-n").innerHTML = [
+      esc(modelLabel()),
       meta.consultations ? `${meta.consultations} PriMock57 test consultations, ${unitName}` : unitName,
       meta.weighted_errors ? `${nf.format(Math.round(meta.weighted_errors))} weighted errors` : "",
       meta.critical_errors ? `${nf.format(meta.critical_errors)} of them on numbers, doses or negations` : "",
@@ -807,7 +813,7 @@
     const fine = $("#live-fine");
     if (S.kind === "upload") fine.textContent = "Whisper-small transcribing your file now. There is no human transcript, so flags cannot be checked against the truth.";
     else if (S.kind === "live") fine.textContent = "Whisper-small decoding each turn from its own channel right now; the verifier scores it as it arrives. Word timing inside a turn is spread evenly.";
-    else fine.textContent = "Whisper-small's saved output on this audio, replayed at its timings. Word timing inside each turn is spread evenly.";
+    else fine.textContent = `${modelLabel()}: saved output on this audio, replayed at its timings. Word timing inside each turn is spread evenly.`;
     $("#ref-wrap").hidden = S.kind === "upload";
     $("#empty-text").innerHTML = S.kind === "live"
       ? "Press <b>Start transcribing</b>. Whisper decodes each turn from the audio, and the verifier flags words that may be wrong and marks ‸ where words may be missing."
@@ -834,7 +840,7 @@
     const keep = opts.keepAudio && hasAudio && S.id === id;
     newSession("saved", { id, split: payload.split ?? info.split, duration: payload.duration || info.duration });
     payload.units.forEach(addUnit);
-    $("#meta").innerHTML = `PriMock57 · ${esc(id)}<br>${fmt(S.duration)} · ${payload.units.length} turns · whisper-small`;
+    $("#meta").innerHTML = `PriMock57 · ${esc(id)}<br>${fmt(S.duration)} · ${payload.units.length} turns · ${esc(modelLabel())}`;
     showSplit();
     if (!keep) {
       audioNote("Loading audio…");
@@ -851,6 +857,26 @@
     tick(true);
   }
   $("#consult").addEventListener("change", (e) => { setMode("replay"); openConsultation(e.target.value); });
+  $("#model").addEventListener("change", async (e) => {
+    models.current = e.target.value;
+    state.curves = null;   // the curves belong to the model's verifier
+    clock.pause();
+    setMode("replay");
+    if (lastConsult) await openConsultation(lastConsult, { keepAudio: true });
+    else rebuildView();
+  });
+  async function initModels() {
+    const sel = $("#model");
+    if (MOCK) { sel.innerHTML = `<option value="small">whisper-small</option>`; return; }
+    try {
+      const r = await API.models();
+      models.list = r.models.filter((m) => m.available);
+      models.current = r.default;
+    } catch (_) { models.current = null; }   // an older server: whisper-small only
+    sel.innerHTML = models.list.map((m) => `<option value="${esc(m.id)}">${esc(m.label)}</option>`).join("");
+    if (models.current) sel.value = models.current;
+    sel.disabled = models.list.length < 2;
+  }
 
   function rebuildView() {
     currentSpans = spans();
@@ -877,6 +903,7 @@
   async function init() {
     route();
     notice(MOCK ? "Mock mode: sample data from <code>mock/</code>, no server needed." : "Loading consultations…");
+    await initModels();
     try { consultations = await API.consultations(); }
     catch (err) {
       notice(`Could not reach the Second Listen server (${esc(err.message)}). Start it from the repository root with ` +

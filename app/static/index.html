@@ -2,186 +2,66 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Second Listen</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;600&display=swap">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+  <link rel="stylesheet" href="simple.css">
 </head>
 <body>
-<div class="wrap">
+<main class="wrap">
   <header class="top">
-    <div class="brand">
-      <div class="mark" aria-hidden="true">
-        <svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 14h2M8.5 9v10M13 5v18M17.5 10v8"/><circle cx="22.5" cy="14" r="3.2"/></svg>
-      </div>
-      <div>
-        <h1>Second Listen</h1>
-        <p>Whisper drafts the consultation. A human only listens to the parts it may have got wrong.</p>
-      </div>
-    </div>
-    <div class="picker">
-      <div class="picker-row">
-        <label class="label" for="consult">Consultation</label>
-        <select class="select" id="consult" disabled><option>Loading…</option></select>
-        <span class="badge" id="split-badge" hidden></span>
-        <span class="btn upload" id="upload-btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg>
-          Upload audio
-          <input type="file" id="upload" accept="audio/*,.wav,.mp3,.m4a,.flac,.ogg" aria-label="Upload an audio file to transcribe">
-        </span>
-      </div>
-      <div class="meta" id="meta">&nbsp;</div>
+    <h1>Second<span>Listen</span></h1>
+    <div class="pick">
+      <label for="consult">Consultation</label>
+      <select id="consult" disabled><option>Loading…</option></select>
     </div>
   </header>
 
-  <section class="premise" aria-label="Why this exists">
-    <div><span class="num warn">52%</span><p>of 30-second consultation windows from whisper-small need a correction (WER above 10%).</p></div>
-    <div><span class="num warn">0.3%</span><p>is all a review threshold tuned on short dictation clips sends to a human here. Fixing that by recalibrating sends 96%.</p></div>
-    <div><span class="num ours">Words, not windows</span><p>Flag the words that might be wrong and the gaps where words may be missing, and play only those clips.</p></div>
-  </section>
-
-  <nav class="tabs" aria-label="Mode">
-    <a href="#live" data-view="live">Live <small>watch it transcribe</small></a>
-    <a href="#review" data-view="review">Review <small>check the flags</small></a>
-    <a href="#compare" data-view="compare">Compare <small>human effort</small></a>
-  </nav>
-
-  <p class="notice" id="notice" role="status" hidden></p>
-
-  <!-- shared player -->
-  <section class="panel player" aria-label="Consultation audio">
-    <button class="play" id="play" type="button" aria-label="Play"></button>
-    <div class="player-row">
-      <span class="clock"><b id="t-now">0:00</b> / <span id="t-dur">0:00</span></span>
-      <div class="lanes">
-        <span><i class="sw" style="background:var(--doctor)"></i>Doctor (top)</span>
-        <span><i class="sw" style="background:var(--patient)"></i>Patient (bottom)</span>
-        <span><i class="sw" style="background:var(--flag)"></i>Flagged word or gap</span>
-      </div>
-      <div class="speeds" role="group" aria-label="Playback speed">
-        <button type="button" data-rate="1" aria-pressed="true">1×</button>
-        <button type="button" data-rate="1.5" aria-pressed="false">1.5×</button>
-        <button type="button" data-rate="2" aria-pressed="false">2×</button>
-      </div>
+  <section class="player" aria-label="Audio">
+    <button class="play" id="play" type="button" aria-label="Play" disabled>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path id="play-icon" d="M8 5v14l11-7z"/></svg>
+    </button>
+    <input type="range" id="seek" min="0" max="1" step="0.1" value="0" aria-label="Position" disabled>
+    <span class="time mono" id="time">0:00 / 0:00</span>
+    <div class="seg" role="group" aria-label="Mode" id="mode">
+      <button type="button" data-mode="watch" aria-pressed="true">Watch</button>
+      <button type="button" data-mode="review" aria-pressed="false">Review <span id="nspots"></span></button>
     </div>
-    <canvas class="wave" id="wave" aria-label="Waveform. Click to jump to a moment." role="slider" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" tabindex="0"></canvas>
-    <p class="audio-note" id="audio-note" hidden></p>
-  </section>
-
-  <!-- LIVE -->
-  <section class="view live" id="view-live" aria-label="Live transcription">
-    <div class="panel livebar">
-      <div class="seg" role="group" aria-label="Transcript source">
-        <button type="button" data-mode="replay" aria-pressed="true">Replay saved transcript</button>
-        <button type="button" data-mode="run" aria-pressed="false">Run Whisper now</button>
-      </div>
-      <label class="toggle" id="second-wrap" hidden><input type="checkbox" id="second"> Use a second opinion (large-v3-turbo, slower)</label>
-      <label class="toggle" id="sync-wrap" hidden><input type="checkbox" id="sync" checked> Pause the audio when Whisper falls behind</label>
-      <button class="btn primary" type="button" id="run-start" hidden>
-        <svg viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/></svg>Start transcribing
-      </button>
-      <span class="status" id="live-status" aria-live="polite"></span>
-    </div>
-    <div class="live-grid">
-      <div class="panel stream" id="stream" aria-live="off">
-        <div class="empty" id="empty">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v12M8 7v4M16 7v4M4 10v1M20 10v1"/><path d="M8 20h8"/></svg>
-          <p id="empty-text">Press play. The transcript appears as the doctor and patient speak. The verifier lights up words that may be wrong and marks ‸ where words may be missing.</p>
-        </div>
-        <div class="behind" id="behind" hidden><span class="spinner" aria-hidden="true"></span><span>Decoding…</span></div>
-      </div>
-      <aside class="panel side" aria-label="Live counters">
-        <div class="stat">
-          <span class="label">Words written</span>
-          <span class="v mono" id="s-words">0</span>
-        </div>
-        <div class="stat">
-          <span class="label">Flagged for a human</span>
-          <span class="v mono" id="s-flags">0</span>
-          <p>Words and gaps with expected weighted error of at least <span id="s-th" class="mono">0.25</span>, plus every number and negation.</p>
-        </div>
-        <hr>
-        <div class="stat">
-          <span class="label">Audio a human must hear</span>
-          <span class="v mono" id="s-listen">0:00 <small>of 0:00</small></span>
-          <div class="bar" aria-hidden="true"><i id="s-listen-bar" style="width:0%"></i></div>
-          <p>Reviewing whole windows means hearing all of it.</p>
-        </div>
-        <hr>
-        <div class="legend">
-          <span><span class="k" style="background:color-mix(in srgb, var(--flag) 30%, transparent);box-shadow:0 2px 0 var(--flag)">word</span>Verifier thinks it may be wrong (darker = costlier)</span>
-          <span><span class="k" style="background:var(--crit-soft);box-shadow:0 2px 0 var(--crit)">no</span>Number or negation</span>
-          <span><span class="k gap">‸</span>Words may be missing here</span>
-        </div>
-        <label class="toggle" id="ref-wrap"><input type="checkbox" id="show-ref"> Show what was really said</label>
-        <p class="fine" id="live-fine"></p>
-      </aside>
+    <div class="seg" role="group" aria-label="Whisper column" id="srcseg">
+      <button type="button" data-src="live" aria-pressed="true">Whisper live</button>
+      <button type="button" data-src="saved" aria-pressed="false">Whisper saved</button>
     </div>
   </section>
+  <p class="status" id="status" aria-live="polite"></p>
 
-  <!-- REVIEW -->
-  <section class="view review" id="view-review" aria-label="Review the flags" hidden>
-    <div class="panel controls">
-      <div class="range">
-        <label class="label" for="th">Flag when expected weighted error ≥ <span id="th-v" class="mono">0.25</span></label>
-        <input type="range" id="th" min="5" max="100" step="5" value="25">
-      </div>
-      <label class="toggle"><input type="checkbox" id="crit-on" checked> Always flag numbers and negations</label>
-      <div class="progress">
-        <span class="label"><span id="p-done" class="mono">0</span> of <span id="p-total" class="mono">0</span> flags checked · hear <span id="p-listen" class="mono">0:00</span> of <span id="p-dur" class="mono">0:00</span></span>
-        <div class="bar" aria-hidden="true"><i id="p-bar" style="width:0%"></i></div>
-      </div>
+  <section class="review" id="review" aria-label="Human review" hidden></section>
+
+  <section class="cols" aria-label="Transcripts" id="cols">
+    <div class="colhead whisper">
+      <h2>Whisper</h2>
+      <p>whisper-small, off the shelf</p>
+      <b class="stat mono" id="stat-w"></b>
     </div>
-    <div class="review-grid">
-      <div class="panel doc" id="doc"></div>
-      <aside class="panel card" id="card" aria-live="polite"></aside>
+    <div class="colhead ours">
+      <h2>Our model</h2>
+      <p>fine-tuned large-v3-turbo + verifier</p>
+      <b class="stat mono" id="stat-o"></b>
     </div>
+    <div class="rows" id="rows"></div>
   </section>
 
-  <!-- COMPARE -->
-  <section class="view compare" id="view-compare" aria-label="Compare human effort" hidden>
-    <div class="cmp-head">
-      <h2 style="font-size:24px">How much harm is left after a human listens for a minute?</h2>
-      <div style="display:flex;flex-wrap:wrap;gap:8px">
-        <div class="seg" role="group" aria-label="Unit">
-          <button type="button" data-dom="window" aria-pressed="true">30-s windows</button>
-          <button type="button" data-dom="turn" aria-pressed="false">Speaker turns</button>
-        </div>
-        <div class="seg" role="group" aria-label="Errors">
-          <button type="button" data-err="weighted" aria-pressed="true">All, weighted</button>
-          <button type="button" data-err="critical" aria-pressed="false">Critical only</button>
-        </div>
-      </div>
-    </div>
-    <div class="cmp-grid">
-      <div class="panel chart">
-        <svg id="chart" viewBox="0 0 640 380" role="img" aria-label="Errors left against seconds of listening per consultation"></svg>
-        <div class="slider">
-          <label class="label" for="budget">A human listens for <span id="budget-v" class="mono">60</span> s per consultation</label>
-          <input type="range" id="budget" min="0" max="300" step="5" value="60">
-        </div>
-      </div>
-      <aside class="panel readouts" id="readouts">
-        <span class="label" id="r-title">Weighted errors left in the transcript</span>
-        <div id="r-rows"></div>
-        <hr>
-        <p class="fine" id="cmp-n"></p>
-      </aside>
-    </div>
-    <p class="takeaway" id="takeaway"></p>
-  </section>
-
-  <footer>
-    Audio and human transcript: PriMock57 (Papadopoulos Korfiatis et al., 2022, ACL), CC BY 4.0. These are simulated consultations role-played by clinicians, not real patients.
-    Transcripts come from faster-whisper small. Flags come from the verifier, a gradient-boosted model that predicts the clinically weighted error of each word and of each gap between words
-    (numbers and negations ×10, medical terms ×5, other words ×1, function words ×0.2). It was trained on Eka calibration and validation clips and the 10 PriMock57 recalibration consultations,
-    so consultations marked <b>used in training</b> are not a fair test. The previous console is at <a href="classic/">classic</a>.
+  <footer class="legend">
+    <span><i class="k-changed">word</i> our model wrote it differently</span>
+    <span><i class="k-flag">word</i> verifier says listen (click to play)</span>
+    <span><i class="k-gap">‸</i> words may be missing</span>
+    <span><i class="k-cut">word</i> dropped or replaced by our model</span>
+    <span><i class="k-fixed">word</i> fixed by you in Review</span>
+    <small>Our model's transcripts were made on a GPU and are replayed in time with the audio; Whisper can run live on this computer.
+      The detailed tool is at <a href="studio/">studio</a>.</small>
   </footer>
-</div>
-
-<audio id="audio" preload="auto"></audio>
-<script src="app.js"></script>
+</main>
+<script src="simple.js"></script>
 </body>
 </html>
