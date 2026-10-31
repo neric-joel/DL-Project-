@@ -1,275 +1,132 @@
 # When ASR Confidence Does Not Travel
 
-**Selective review of Whisper transcripts under clinical speech domain shift.**
-Course project for CSE 598 *Operationalizing Deep Learning: A Sociotechnical Perspective*,
-Arizona State University, Fall 2026.
+Speech recognition (Whisper) is used to draft doctors' notes, and a person checks only the transcripts
+the system is unsure about. We asked whether that "unsure" signal still works when you move from short
+medical clips to real doctor-patient conversations, and then built a system that cuts how much a person
+has to listen.
+
+Course project for CSE 598 *Operationalizing Deep Learning: A Sociotechnical Perspective*, Arizona State
+University, Fall 2026.
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/neric-joel/DL-Project-/blob/main/notebooks/reproduce_colab.ipynb)
 
-## Findings in brief
+## The setup
 
-Whisper-small, 11,195 transcripts. The review policy was calibrated on Eka (Indian-English medical
-clips, median 5 words) and applied unchanged to PriMock57 consultations cut into 30-second windows
-(median 67 words, 4.8 speaker turns). Every number below comes from [results/SUMMARY.md](results/SUMMARY.md).
-Intervals are 95% cluster-bootstrap intervals, and hypothesis tests are one-sided and Holm-adjusted.
+- **Model:** Whisper small, unchanged, on 11,195 recordings.
+- **Tuned on:** Eka, short dictated medical clips (about 5 words each).
+- **Tested on:** PriMock57, 57 doctor-patient consultations, cut into 30-second pieces (about 67 words
+  and 5 speaker turns each).
+- **Review rule:** score how risky each transcript is from Whisper's own confidence, send the riskiest to
+  a person, accept the rest.
 
-1. **Whisper sounds more sure on conversations, but it is not more right.** Mean sequence confidence is
-   0.75 on PriMock57 windows against 0.61 on Eka clips, yet about half of the transcripts need correcting
-   in both (WER above 10%: 52% vs 55%). At any given confidence, a conversation window is more often
-   wrong (figure 1).
-2. **Frozen thresholds stop working.** A threshold that sends 10% of Eka validation clips to review sends
-   11.8% of held-out Eka clips, but only **0.3%** of conversation windows (0.1% for raw confidence).
-   52% of the windows it accepts automatically have WER above 10%. The share of erroneous transcripts that
-   slip through rises by 20 points (**H2 supported**, p = 0.004).
-3. **The calibrated model is overconfident on conversations.** It predicts that 44% of windows are
-   erroneous, but 52% are: calibration-in-the-large −0.074 [−0.111, −0.038] (**H1 supported**, p = 0.003).
-   Calibration error doubles (ECE 0.039 → 0.078) and ranking gets worse (AUROC 0.84 → 0.72). On short
-   single-speaker turns it errs the other way (underconfident, +0.081).
-4. **Why: length and speaker overlap, not word confidence.** At word level Whisper is *under*confident on
-   PriMock57: 94.5% of words are right against a mean word probability of 0.886 (**H4 supported** for
-   word-level ECE, 0.060 vs 0.026, but not in the direction the proposal expected). The transcript-level
-   failure follows from longer, multi-speaker units:
-   * the frozen model's length and segment-count features extrapolate (figure 7), and the same model
-     without them is not overconfident;
-   * a simulation in which Whisper's word probabilities are perfectly calibrated produces a gap of the
-     same size (null median −0.105 [−0.192, −0.016]);
-   * 88% of windows contain overlapping speech, and those windows carry the errors (55% erroneous against
-     28% without overlap);
-   * at matched length (25–41 words), single-speaker turns are calibrated (−0.001) while windows are still
-     overconfident (−0.141 [−0.224, −0.044]). Multi-speaker audio therefore adds something beyond length,
-     although this rests on 88 windows.
-5. **Recalibration fixes the probabilities, at a price.** Refitting two parameters on 10 PriMock57
-   consultations moves calibration-in-the-large from −0.074 to +0.029. The label-free plug-in rule then
-   keeps a 20% error promise (11.6% realised, against 31.2% for the frozen model), but only by sending
-   **96% of windows** to a human. None of the recalibration contrasts survives Holm correction (H3a and
-   H3c not supported). H3b's verdict changed with a post-hoc scoring fix, so it is reported as unstable
-   ([protocol, amendment 6](docs/PROTOCOL.md)).
-6. **Clinically critical words.** Negations are recognised 95.5% of the time on Eka but 87.8% on windows
-   (86.1% on turns), and 24% of windows contain a missed or wrong number or negation. Under the frozen
-   10% budget, an average test consultation has 8 auto-accepted dose or negation errors. A policy trained
-   on WER does not target these errors.
-7. **A label-free alarm would have caught the shift.** At the frozen threshold, the share of windows sent to
-   review falls outside its Eka interval, and mean confidence moves by 0.8 Eka standard deviations. Neither
-   needs a single target label.
-8. **A larger model (exploratory: whisper-large-v3-turbo,
-   [summary](results/SUMMARY_large-v3-turbo.md)).** WER falls to 10.1% on Eka and 9.9% on windows, and
-   its Eka-calibrated probabilities transfer well (calibration-in-the-large −0.015, so H1 does not hold).
-   The thresholds still do not transfer: the "10%" budget reviews 3.7% of windows (0.0% with raw
-   confidence), and 39% of accepted windows need correcting. A better model fixes the calibration, not
-   the operating point.
+## What we found
 
-**Beyond the study (exploratory, [protocol, amendment 7](docs/PROTOCOL.md)).** After the confirmatory
-results we asked what a deployment would try next. These results are exploratory: no test consultation
-was used for training, but the systems we kept were chosen after comparing alternatives on the test
-consultations, so their numbers are somewhat optimistic.
+1. **Whisper sounds more sure on conversations, but is not more right.** About half of the transcripts
+   need a correction in both datasets, yet Whisper's confidence is higher on the conversations.
+2. **A threshold tuned on clips breaks on conversations.** A setting that sends 10% of clips to a person
+   sends only 0.3% of conversation pieces, and half of the pieces it accepts contain errors.
+3. **The cause is long, overlapping speech, not single words.** Word by word, Whisper is, if anything,
+   more right than it thinks. The trouble comes from long pieces where people talk over each other.
+4. **Retuning on a few conversations fixes the numbers, at a cost.** After retuning on 10 consultations
+   the promises hold again, but 96% of conversation pieces then go to a person.
+5. **Serious words slip through.** A missed "not" or a wrong dose is not what a rule based on overall
+   error rate looks for: an average consultation still has about 8 such errors that nobody checks.
+6. **A bigger Whisper (large-v3-turbo) makes fewer mistakes**, but its thresholds still do not carry over.
 
-9. **Point the human at words, not whole transcripts.** A verifier ranks single words that may be wrong,
-   and gaps where words were probably dropped, so a reviewer listens to short clips. Errors are weighted
-   by clinical harm (a number, dose or negation counts 10, a medical term 5, another word 1, a filler
-   0.2). With whisper-small, after 60 s of listening per consultation, the verifier leaves 62% of the
-   weighted errors in the windows, against 88% when whole windows are reviewed riskiest first.
-10. **Fine-tuning helps, but it does not travel either.** LoRA fine-tuning of large-v3-turbo on 8
-    PriMock57 consultations cuts window WER from 9.9% to 7.2% (3 seeds, all CIs exclude 0), yet makes Eka
-    *worse* (critical errors 9.3% → 12.5%). Training on both datasets fixes that: Eka WER 8.3% and
-    critical errors 4.9%, windows 7.5%. With this model and the verifier, a reviewer who listens for 30 s
-    per consultation leaves 94 weighted errors in the windows instead of 129, and 2.8 critical errors in
-    the turns instead of 4.5 (against whisper-small + verifier). Details and negative results:
-    [experiments/lora_pilot/README.md](experiments/lora_pilot/README.md).
+Exact numbers and tests: [results/SUMMARY.md](results/SUMMARY.md) (Whisper small) and
+[results/SUMMARY_large-v3-turbo.md](results/SUMMARY_large-v3-turbo.md).
 
-**For a team deploying a clinical scribe:** do not carry a review threshold from dictation-style audio to
-conversations. Monitor the review share and the confidence distribution for drift. Recalibrate on a few
-labelled consultations from the target setting before trusting auto-accept, and with a model of this
-size expect most conversation windows to need a human. Add a separate check for doses and negations,
-because a WER-based policy does not look for them. Flagging single words instead of whole transcripts,
-and fine-tuning on labelled audio from *both* settings, cut the listening needed (findings 9 and 10).
+**Advice for a team deploying a medical scribe:** do not reuse a review threshold from dictation on
+conversations, watch for drift, retune on a few labelled consultations from your own clinic, and check
+numbers, doses and negations separately.
 
-| | |
-|:---:|:---:|
-| ![Same confidence, different error rates](results/figures/fig1_confidence_vs_error.png) | ![Promised vs actual](results/figures/fig4_threshold_transfer.png) |
-| **Figure 1.** Error rate by Whisper confidence, and the confidence distributions. | **Figure 4.** Review share and accepted-error rate: promised vs realised. |
-| ![Reliability](results/figures/fig2_reliability.png) | ![Why](results/figures/fig7_feature_contributions.png) |
-| **Figure 2.** Reliability of the frozen (left) and recalibrated (right) model. | **Figure 7.** Which features move the frozen model's risk on PriMock57. |
+## What we built next (exploratory)
 
-All ten figures are in [results/figures/](results/figures/).
+These came after the main study ([protocol, amendment 7](docs/PROTOCOL.md)). Nothing was trained on the
+test recordings, but the versions we kept were picked after comparing on them, so treat the numbers as
+slightly optimistic.
 
-## The question
+- **A mistake spotter (the verifier).** Instead of whole transcripts, it flags single words that are
+  probably wrong and places where words were probably dropped, so a person listens to short clips.
+  Serious words (numbers, doses, "not") count most.
+- **A fine-tuned Whisper.** Whisper large-v3-turbo fine-tuned with LoRA on 8 training consultations
+  *and* the Eka training clips. Fine-tuning on conversations alone made it worse on Eka; adding both
+  fixed that.
 
-Speech recognition is now used to draft clinical notes. The dangerous errors are the confident ones
-(a dose, a drug name, a missed "not"), because nobody checks a transcript the system is sure about.
-A **review policy** turns confidence signals that Whisper produces anyway into a risk score for each
-transcript, sends the riskiest ones to a human, and accepts the rest automatically.
+| 47 test consultations, 30-second pieces | Where we started (Whisper small) | Our system |
+|---|---:|---:|
+| Words wrong, per 100 | 11.6 | **7.5** |
+| Words skipped, per 100 | 6.5 | **4.0** |
+| Serious mistakes left after a person listens for 30 s (per consultation) | 5.2 | **4.0** |
+| Serious mistakes caught by checking the riskiest 10% of words | 77% | **86%** |
+| Words wrong per 100 on Eka clips | 13.7 | **8.3** |
 
-> Does a review policy calibrated on short medical speech stay reliable when it is applied, unchanged,
-> to longer conversations between doctors and patients?
+Details, and the ideas that did not work: [experiments/lora_pilot/README.md](experiments/lora_pilot/README.md).
 
-We calibrate on the **Eka Medical ASR Evaluation Dataset** (short English medical clips, many Indian
-drug brand names) and deploy on **PriMock57** (57 simulated primary-care consultations, doctor and
-patient). In the study Whisper's weights are never changed; fine-tuning is only in the exploratory
-findings 9 and 10.
-
-## How it works
-
-```
- audio ──► faster-whisper (small) ──► transcript + decoder statistics
-                                           │
-                     ┌─────────────────────┴──────────────────────┐
-                     ▼                                             ▼
-        confidence features (15)                     scoring against the human transcript
-        log-prob, word probabilities,                WER, S/D/I, dose & negation tokens,
-        no-speech, repetition, length ...            Eka entities  ──► label: WER > 10%
-                     │                                             │
-                     ▼                                             │
-        review policy ──► risk ──► accept / send to human ◄────────┘  (evaluation only)
-```
-
-| Policy | Risk score | Fitted on | Thresholds tuned on |
-|---|---|---|---|
-| **P1** raw confidence | 1 − exp(mean token log-probability) | – | Eka validation |
-| **P2** Whisper's rules | no-speech probability, compression ratio, repeated trigrams | – | Eka validation |
-| **P3** Eka-calibrated, frozen | logistic regression on 15 decoder features | Eka calibration | Eka validation |
-| **P4** recalibrated | P3 with a two-parameter (Platt) refit | 10 PriMock57 consultations | same 10 consultations |
-
-Each policy is run at three kinds of operating point: a **review budget** (send the top 10% to a human),
-an **empirical risk target** (keep the error rate among accepted transcripts at or below 20%, tuned on
-labelled data), and a **plug-in rule** (the same target, computed from the model's own probabilities on
-unlabelled incoming transcripts). The last one works only if the probabilities are calibrated, which is
-exactly what domain shift breaks.
-
-**Target units.** PriMock57 is cut two ways. *Windows* mix both channels into stretches of up to 30 s
-cut only between utterances (4.8 speaker turns on average): the unit a chunked clinical scribe would
-transcribe. *Turns* are single utterances from one speaker's channel, a control that is conversational
-but short and single-speaker, like the Eka clips.
-
-The full design, every definition, and the two amendments recorded before any PriMock57 transcript
-was scored are in **[docs/PROTOCOL.md](docs/PROTOCOL.md)**. The exploratory work done after the
-confirmatory results (word-level verifier, clinical error weights, LoRA fine-tuning) is its Amendment 7.
-Data handling is in [docs/DATA.md](docs/DATA.md).
-
-## Reproducing the results
-
-Tested on Windows 11 (RTX 3050 Laptop 4 GB, Python 3.12), in Docker (Python 3.12 and 3.13) and on
-Google Colab (T4, Python 3.13).
-
-**1. From the committed per-unit results (minutes, no GPU, no downloads).**
-Every table, figure and `results/SUMMARY.md` is rebuilt from `results/units/`.
-
-```bash
-python -m venv .venv
-source .venv/bin/activate            # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-pip install --no-deps -e .
-asrshift evaluate && asrshift figures && asrshift report
-```
-
-**2. The whole pipeline from raw audio (about 1 hour on a 4 GB GPU).**
-
-```bash
-pip install -r requirements-gpu.txt   # CUDA 12 cuBLAS for ctranslate2 (not needed on Colab)
-asrshift download     # Eka parquet shards (HF Hub) + PriMock57 audio (GitHub LFS), ~2.1 GB, pinned revisions
-asrshift prepare      # units, speaker-disjoint Eka split, consultation split
-asrshift infer        # whisper-small on 11,195 units; resumable
-asrshift score        # WER, critical tokens, entities, labels, features
-asrshift evaluate     # policies, operating points, bootstrap, hypothesis tests (~4 min on CPU)
-asrshift figures
-asrshift report
-```
-
-`asrshift all` runs the same sequence. On a machine without a GPU, `asrshift infer --device cpu
---compute-type int8` works but takes several hours.
-
-**3. Google Colab.** [notebooks/reproduce_colab.ipynb](notebooks/reproduce_colab.ipynb) runs route 1 in
-about 2 minutes, and route 2 in about an hour on a free T4.
-
-**4. Docker (CPU).**
-
-```bash
-docker compose run --rm reproduce     # tests + tables + figures + summary from committed results
-docker compose run --rm pipeline      # full pipeline on CPU (slow)
-```
-
-**Tests:** `pytest` (unit tests plus a synthetic end-to-end run of the evaluation; tests marked `data`
-also check the real splits for leakage when the data is present).
-
-**How exact is it?** Route 1 reproduces every committed number exactly. Route 2 decodes the audio
-again, and float16 decoding is not bit-identical across GPU models. A full rerun on a Colab T4 changed
-445 of the 11,195 transcripts (4%, mostly 30-second windows) and flipped 42 labels relative to the
-committed RTX 3050 run. Estimates moved by up to 0.03 (H1 calibration-in-the-large: −0.074 → −0.061),
-and every hypothesis decision stayed the same.
-
-## Demo: Second Listen
-
-A local web app, Second Listen. The home page plays a PriMock57 consultation with two transcripts side
-by side: whisper-small, decoded live on this computer as the audio plays, and our model (large-v3-turbo
-fine-tuned with LoRA, plus the verifier), replayed from its saved results because it needs a GPU. Words our
-model changed, words the verifier wants a human to hear, and possibly missing words are marked. *Review*
-walks a human through the flagged spots, riskiest first, plays each clip, takes "sounds right" or a typed
-fix, reveals the human transcript, and ends with errors caught against seconds listened and a corrected
-transcript to download. A separate page, `/results.html` ("Our results"), shows the final system's overall
-numbers in plain words and charts: how accurate the transcript is, how well the verifier spots mistakes,
-and how much listening it saves, against where we started (whisper-small). The detailed tool (review curves, policies, uploads) is at `/studio/` and the
-original console at `/classic/`.
+## The app: Second Listen
 
 ```bash
 pip install -r requirements-app.txt
-uvicorn app.server:app --port 8765     # then open http://127.0.0.1:8765
+uvicorn app.server:app --port 8765        # then open http://127.0.0.1:8765
 ```
 
-Playback and live decoding need the downloaded data; everything else works from `results/` alone.
+- **Watch:** a consultation plays with Whisper (transcribing live) and our system side by side, with
+  the words to double-check marked.
+- **Review:** go through the flagged words one by one, hear each clip, confirm or fix it, and see your
+  score.
+- **Our results** (`/results.html`): the overall numbers in plain words and charts.
 
-## Repository layout
+Playing audio needs the downloaded data (step 2 below); everything else works from `results/`.
+
+## Reproduce
+
+```bash
+python -m venv .venv
+source .venv/bin/activate                 # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+pip install --no-deps -e .
+asrshift evaluate && asrshift figures && asrshift report      # 1. from the saved results, minutes, no GPU
+asrshift all                                                  # 2. everything from raw audio, ~1 h on a GPU
+pytest                                                        # tests
+```
+
+Also runs on [Google Colab](notebooks/reproduce_colab.ipynb) and in Docker (`docker compose run --rm
+reproduce`). Route 1 gives the exact committed numbers; route 2 can differ slightly on other GPUs without
+changing any conclusion.
+
+## What is where
 
 ```
-configs/default.yaml     every setting that shapes a reported number
-src/asrshift/            download, prepare, infer, score, features, policies, metrics, evaluate, plots, report
-app/                     Second Listen web app (FastAPI + static pages)
-experiments/lora_pilot/  LoRA fine-tuning (whisper-small pilot, large-v3-turbo on Kaggle), exploratory
-notebooks/               Colab notebook (generated by scripts/make_colab_notebook.py)
-results/units/           per-unit and per-word scores (inputs to every table)
-results/tables/small/    all result tables (CSV)
-results/figures/         all figures
-results/SUMMARY.md       key numbers, generated from the tables
-results/splits/          unit-to-split assignments
-docs/PROTOCOL.md         study protocol, deviations from the proposal, amendments
-docs/DATA.md             datasets, units, splits, transcriber tags
-tests/                   pytest suite
+src/asrshift/            the pipeline: download, prepare, transcribe, score, evaluate, verifier
+app/                     the Second Listen app
+experiments/lora_pilot/  fine-tuning (exploratory)
+results/                 all results, tables and figures
+docs/PROTOCOL.md         every analysis choice, written before the results, plus amendments
+docs/DATA.md             datasets and splits
+configs/default.yaml     every setting behind a reported number
 ```
 
 ## Limitations
 
-* **One model (so far).** The confirmatory results are for whisper-small. A whisper-large-v3-turbo run is
-  declared as exploratory ([configs/large-v3-turbo.yaml](configs/large-v3-turbo.yaml)).
-* **Post-hoc scoring fix.** A normalisation defect ("Oh" read as the digit 0, plus unit spellings) was
-  found after the first results. It was fixed symmetrically and everything was rerun, and the protocol reports
-  every key number before and after (amendment 6).
-* **Simulated consultations.** PriMock57 is role-played by clinicians and staff, recorded over video
-  calls, and transcribed verbatim. It is not real clinical data, and its speakers, accents and recording
-  channel differ from Eka's in several ways at once. The shift we measure is a realistic *bundle*, not one
-  isolated factor. The turn-level control separates length and multi-speaker audio from the rest.
-* **Oracle segmentation.** Windows are cut at the human-annotated utterance boundaries, which acts as a
-  perfect voice-activity detector. A deployed system would cut less cleanly, so the target-domain error
-  is probably understated.
-* **Shared clinicians.** The 57 consultations were run by 7 clinicians, so the recalibration and test
-  consultations share clinicians. Recalibration here means *same clinic*, not *new clinicians*.
-* **Label depends on length.** "WER above 10%" means *any error* for a 3-word clip and *7 or more errors*
-  for a 66-word window. The length-stratified analysis, the length-matched contrast and the null
-  baseline in the protocol check how much of the effect this explains.
-* **Medical terms on PriMock57** are matched with a lexicon built from Eka's human entity annotations
-  (270 shared terms). The comparison is exploratory, and a manual precision check of 100 matches
-  (`results/terms/audit_sample.csv`) is still to be filled in by the team.
+- PriMock57 consultations are role-played, not real patients.
+- Pieces are cut at human-marked speaker boundaries, which real systems would do less cleanly, so real
+  error rates are probably a bit higher.
+- The same 7 clinicians appear in the tuning and test consultations.
+- A scoring fix ("Oh" read as the number 0) came after the first results; both versions are reported
+  (protocol, amendment 6).
 
 ## Team
 
-| Member | Responsibilities (from the proposal) |
+| Member | Role |
 |---|---|
-| Neric Joel A | Project coordination; Eka preparation, session split and entity scoring |
-| Amrish Sasikumar | Whisper inference with faster-whisper; confidence signals per segment |
-| Nirmalraju Kangeyan | PriMock57 preparation and consultation split; WER, insertion and deletion scoring; lexicon matching and audit |
-| Harshini Balamurugan Vadivazhagi | Calibration models and the four review policies, including PriMock57 recalibration |
-| Ulagarchana Ulaga Narasimhan | Evaluation metrics, reliability diagrams, review budgets and risk–coverage results; figures and repository |
+| Neric Joel A | Coordination; Eka preparation, splits and entity scoring |
+| Amrish Sasikumar | Whisper inference and confidence signals |
+| Nirmalraju Kangeyan | PriMock57 preparation; WER scoring; medical-term matching |
+| Harshini Balamurugan Vadivazhagi | Calibration models and the review policies; verifier, fine-tuning and the Second Listen app |
+| Ulagarchana Ulaga Narasimhan | Evaluation metrics, reliability diagrams, review budgets; figures and repository |
 
 ## Data and licences
 
-Code: MIT (see [LICENSE](LICENSE)). The datasets are not included and keep their own licences:
-Eka Medical ASR Evaluation Dataset (MIT, © Eka Care) and PriMock57 (CC BY 4.0, Papadopoulos Korfiatis
-et al., 2022, *PriMock57: A Dataset of Primary Care Mock Consultations*, ACL). Whisper (Radford et al.,
-2023) is run through [faster-whisper](https://github.com/SYSTRAN/faster-whisper).
+Code: MIT ([LICENSE](LICENSE)). The datasets are not included and keep their own licences: Eka Medical
+ASR Evaluation Dataset (MIT, © Eka Care) and PriMock57 (CC BY 4.0, Papadopoulos Korfiatis et al., 2022).
+Whisper (Radford et al., 2023) runs through [faster-whisper](https://github.com/SYSTRAN/faster-whisper).
