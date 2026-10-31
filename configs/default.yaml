@@ -54,6 +54,8 @@ verifier:
   fillers: [yeah, yes, okay, ok, right, mhm, so, like, well, just, oh, um, uh, hmm, mm]
   second_model: large-v3-turbo
   clip_pad_s: 0.6           # audio a reviewer hears before and after a flagged word or gap
+  # two-channel speech-energy features (asrshift.audio_features; needs the PriMock57 audio downloaded)
+  audio_features: false
   curve_max_s: 300
   curve_step_s: 5
   model: {max_iter: 400, learning_rate: 0.05, max_leaf_nodes: 31, l2_regularization: 1.0,

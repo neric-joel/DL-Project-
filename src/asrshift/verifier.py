@@ -20,6 +20,11 @@ Two variants are fitted. ``second`` adds features from a second model's transcri
 (whisper-large-v3-turbo): where the two disagree, and which words the second model wrote in a gap.
 ``solo`` uses whisper-small's own decoder statistics only, for live decoding without a second model.
 
+With ``verifier.audio_features`` on, ``full+audio`` also uses speech energy from PriMock57's two
+channels (``asrshift.audio_features``): overlapping speech around a word or gap, and how much speech
+the unit holds per hypothesis word. It scores the committed transcripts of consultations whose audio
+is downloaded; everything else falls back to the variants without audio.
+
 Training uses only units that were never test data: Eka calibration + validation and the PriMock57
 recalibration consultations. The committed per-word table has no timestamps, so for training and for
 the review curves word times are spread evenly over each unit; live decoding uses Whisper's own.
@@ -43,6 +48,7 @@ import pandas as pd
 from sklearn.ensemble import HistGradientBoostingRegressor
 from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 
+from asrshift import audio_features as af
 from asrshift import score, terms
 from asrshift.align import align, ops
 from asrshift.config import load_config
@@ -312,8 +318,32 @@ def _p_full(probs: np.ndarray | None, status: list[str], conf) -> np.ndarray:
     return np.array([next(it) if st != "W" else c for st in status])
 
 
-def unit_tables(model: str, second: str, w: Weights, sets: tuple[str, ...]) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Word, gap and unit tables (features, labels, evenly spread times) for the chosen sets."""
+def _role(row) -> str | None:
+    """The speaker whose channel a turn came from; None for windows (both channels mixed) and Eka."""
+    return row["roles"] if row.get("subset") != "window" and row.get("roles") in af.ROLES else None
+
+
+def audio_columns(row: dict, n_words: int) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Audio features of a committed unit's tokens and gaps, at the same evenly spread times the
+    training tables use. NaN (and ``two_ch`` 0) for Eka and for consultations without audio."""
+    start = float(row["start"]) if pd.notna(row.get("start")) else 0.0
+    dur = float(row["duration"]) if pd.notna(row.get("duration")) else 1.0
+    end = float(row["end"]) if pd.notna(row.get("end")) else start + dur
+    tr = af.track(row["consultation"]) if row.get("dataset") == "primock57" else None
+    tpw = dur / max(n_words, 1)
+    k = np.arange(n_words)
+    return af.unit_features(tr, _role(row), start, end, start + k * tpw, start + (k + 1) * tpw,
+                            start + np.arange(n_words + 1) * tpw, n_words)
+
+
+def use_audio(cfg: dict) -> bool:
+    return bool(cfg["verifier"].get("audio_features", False))
+
+
+def unit_tables(model: str, second: str, w: Weights, sets: tuple[str, ...],
+                audio: bool = False) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Word, gap and unit tables (features, labels, evenly spread times) for the chosen sets; with
+    ``audio`` also the two-channel speech-energy features."""
     u, probs, other_hyp, other_probs = _committed(model, second)
     W, G, U = [], [], []
     for row in u.to_dict("records"):
@@ -327,6 +357,10 @@ def unit_tables(model: str, second: str, w: Weights, sets: tuple[str, ...]) -> t
         unit = {**row, "kind": _kind(row)}
         other, op = _other_tokens(other_hyp.get(row["unit_id"], ""), other_probs.get(row["unit_id"]))
         wf, gf, _ = features(hyp, p_full, unit, other, w, op)
+        if audio:
+            aw, ag = audio_columns(row, len(hyp))
+            wf, gf = pd.concat([wf, aw.drop(columns=[c for c in aw if c in wf])], axis=1), \
+                pd.concat([gf, ag.drop(columns=[c for c in ag if c in gf])], axis=1)
         dur = float(row["duration"]) if pd.notna(row["duration"]) else 1.0
         tpw = dur / max(len(hyp), 1)
         group = row.get("consultation") if pd.notna(row.get("consultation")) else row.get("group_id")
@@ -354,7 +388,10 @@ def variant_features(variant: str) -> tuple[list[str], list[str]]:
 
     ``full`` (committed results: second transcript plus its word probabilities), ``second`` (a second
     transcript as text, as in live decoding), ``solo`` (whisper-small only) and ``v3`` (the previous
-    feature set, kept for the comparison)."""
+    feature set, kept for the comparison). A ``+audio`` suffix adds the two-channel audio features."""
+    if variant.endswith("+audio"):
+        wf, gf = variant_features(variant[:-len("+audio")])
+        return wf + [f for f in af.WORD_FEATURES if f not in wf], gf + [f for f in af.GAP_FEATURES if f not in gf]
     second_w, second_g = SECOND_FEATURES_W + SECOND_P_FEATURES_W, SECOND_FEATURES_G + SECOND_P_FEATURES_G
     if variant == "full":
         return WORD_FEATURES + SECOND_P_FEATURES_W, GAP_FEATURES + SECOND_P_FEATURES_G
@@ -386,16 +423,19 @@ def train(model: str = "small", second: str = "large-v3-turbo", cfg: dict | None
     labelling some of its own consultations. The saved model never sees a test consultation."""
     cfg = cfg or load_config()
     w = Weights.from_config(cfg)
-    W, G, _ = unit_tables(model, second, w, ("train",))
-    fitted = fit_variants(W, G, cfg)
+    audio = use_audio(cfg)
+    W, G, _ = unit_tables(model, second, w, ("train",), audio=audio)
+    committed = "full+audio" if audio else "full"
+    fitted = fit_variants(W, G, cfg, ("full+audio", "full", "second", "solo") if audio else ("full", "second", "solo"))
     vc = cfg["verifier"]
     meta = {"model": model, "second": second, "weights": {c: w.of(c) for c in CATS},
             "train_units": int(W["unit_id"].nunique()), "train_words": int(len(W)), "train_gaps": int(len(G)),
             "hyperparameters": {"shared": vc["model"], "words": vc.get("model_words", {}), "gaps": vc.get("model_gaps", {})},
-            "features": {"words": fitted["full"]["word_features"], "gaps": fitted["full"]["gap_features"]}}
+            "committed_variant": committed,
+            "features": {"words": fitted[committed]["word_features"], "gaps": fitted[committed]["gap_features"]}}
     path = model_path(model)
     path.parent.mkdir(parents=True, exist_ok=True)
-    joblib.dump({"meta": meta, "variants": fitted, "weights": w, "committed_variant": "full"}, path, compress=3)
+    joblib.dump({"meta": meta, "variants": fitted, "weights": w, "committed_variant": committed}, path, compress=3)
     load.cache_clear()
     curves = write_curves(model, second, cfg, crossfit=crossfit)
     i60 = curves["x_seconds"].index(60) if 60 in curves["x_seconds"] else 12
@@ -521,7 +561,15 @@ def consultation_payload(consultation: str, unit: str = "turn", model: str = "sm
         p = _p_full(probs.get(row["unit_id"]), lab["status"], row["conf"])
         other, op = _other_tokens(other_hyp.get(row["unit_id"], ""), other_probs.get(row["unit_id"]))
         wf, gf, sugg = features(hyp, p, {**row, "kind": _kind(row)}, other, w, op)
-        sw, sg = v.predict(wf, gf, v.committed_variant)
+        variant = v.committed_variant
+        if variant.endswith("+audio"):
+            if af.has_channels(consultation):
+                aw, ag = audio_columns(row, len(hyp))
+                wf, gf = pd.concat([wf, aw.drop(columns=[c for c in aw if c in wf])], axis=1), \
+                    pd.concat([gf, ag.drop(columns=[c for c in ag if c in gf])], axis=1)
+            else:
+                variant = variant[:-len("+audio")]
+        sw, sg = v.predict(wf, gf, variant)
         times = _spread(disp, float(row["start"]), float(row["end"]))
         cats = categories(hyp, w)
         dw = [{"text": d, "t0": t0, "t1": t1, "p": None, "score": 0.0, "critical": False, "wrong": None}
@@ -723,7 +771,8 @@ def write_curves(model: str = "small", second: str = "large-v3-turbo", cfg: dict
     v = load(model)
     out: dict = {"x_seconds": budgets, "meta": {"model": model, "second": second, "clip_pad_s": pad,
                                                 "variant": v.committed_variant}}
-    tests = {key: unit_tables(model, second, v.weights, (s,))
+    audio = v.committed_variant.endswith("+audio")
+    tests = {key: unit_tables(model, second, v.weights, (s,), audio=audio)
              for key, s in (("window", "pm_window_test"), ("turn", "pm_turn_test"))}
     for key, (W, G, U) in tests.items():
         sw, sg = v.predict(W, G, v.committed_variant)
@@ -734,7 +783,7 @@ def write_curves(model: str = "small", second: str = "large-v3-turbo", cfg: dict
                             "weighted_errors": round(float(parts["total"][:, 0].sum()), 1),
                             "critical_errors": int(parts["total"][:, 1].sum())}
     if crossfit:
-        Wtr, Gtr, _ = unit_tables(model, second, v.weights, ("train",))
+        Wtr, Gtr, _ = unit_tables(model, second, v.weights, ("train",), audio=audio)
         preds = _crossfit_preds(v, Wtr, Gtr, tests, cfg)
         out["crossfit"] = {"note": "each test consultation scored by a model that also trained on the other "
                                    "test consultations (5 folds by consultation); not the deployed model"}

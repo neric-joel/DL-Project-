@@ -206,3 +206,20 @@ def test_crossfit_never_scores_a_consultation_with_its_own_data(monkeypatch):
     # 5 folds x (words, gaps); each model saw the training data and exactly 4/5 of the consultations
     assert len(fits) == 10
     assert all("eka" in f.cons and len(f.cons - {"eka"}) == 8 for f in fits)
+
+
+def test_audio_variant_adds_audio_features():
+    from asrshift import audio_features as af
+
+    wf, gf = v.variant_features("full")
+    awf, agf = v.variant_features("full+audio")
+    assert awf[:len(wf)] == wf and agf[:len(gf)] == gf
+    assert set(awf) - set(wf) == set(af.WORD_FEATURES) and set(agf) - set(gf) == set(af.GAP_FEATURES)
+    assert v.variant_features("solo+audio")[0][-len(af.WORD_FEATURES):] == af.WORD_FEATURES
+
+
+def test_audio_columns_nan_for_eka():
+    row = {"dataset": "eka", "consultation": None, "start": 0.0, "end": 3.0, "duration": 3.0, "subset": "x", "roles": None}
+    aw, ag = v.audio_columns(row, 4)
+    assert len(aw) == 4 and len(ag) == 5
+    assert aw["a_ov"].isna().all() and (ag["two_ch"] == 0).all()
