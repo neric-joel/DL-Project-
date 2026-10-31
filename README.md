@@ -58,11 +58,30 @@ Intervals are 95% cluster-bootstrap intervals, and hypothesis tests are one-side
    confidence), and 39% of accepted windows need correcting. A better model fixes the calibration, not
    the operating point.
 
+**Beyond the study (exploratory, [protocol, amendment 7](docs/PROTOCOL.md)).** After the confirmatory
+results we asked what a deployment would try next. These results are exploratory: no test consultation
+was used for training, but the systems we kept were chosen after comparing alternatives on the test
+consultations, so their numbers are somewhat optimistic.
+
+9. **Point the human at words, not whole transcripts.** A verifier ranks single words that may be wrong,
+   and gaps where words were probably dropped, so a reviewer listens to short clips. Errors are weighted
+   by clinical harm (a number, dose or negation counts 10, a medical term 5, another word 1, a filler
+   0.2). With whisper-small, after 60 s of listening per consultation, the verifier leaves 62% of the
+   weighted errors in the windows, against 88% when whole windows are reviewed riskiest first.
+10. **Fine-tuning helps, but it does not travel either.** LoRA fine-tuning of large-v3-turbo on 8
+    PriMock57 consultations cuts window WER from 9.9% to 7.2% (3 seeds, all CIs exclude 0), yet makes Eka
+    *worse* (critical errors 9.3% → 12.5%). Training on both datasets fixes that: Eka WER 8.3% and
+    critical errors 4.9%, windows 7.5%. With this model and the verifier, a reviewer who listens for 30 s
+    per consultation leaves 94 weighted errors in the windows instead of 129, and 2.8 critical errors in
+    the turns instead of 4.5 (against whisper-small + verifier). Details and negative results:
+    [experiments/lora_pilot/README.md](experiments/lora_pilot/README.md).
+
 **For a team deploying a clinical scribe:** do not carry a review threshold from dictation-style audio to
 conversations. Monitor the review share and the confidence distribution for drift. Recalibrate on a few
 labelled consultations from the target setting before trusting auto-accept, and with a model of this
 size expect most conversation windows to need a human. Add a separate check for doses and negations,
-because a WER-based policy does not look for them.
+because a WER-based policy does not look for them. Flagging single words instead of whole transcripts,
+and fine-tuning on labelled audio from *both* settings, cut the listening needed (findings 9 and 10).
 
 | | |
 |:---:|:---:|
@@ -85,7 +104,8 @@ transcript, sends the riskiest ones to a human, and accepts the rest automatical
 
 We calibrate on the **Eka Medical ASR Evaluation Dataset** (short English medical clips, many Indian
 drug brand names) and deploy on **PriMock57** (57 simulated primary-care consultations, doctor and
-patient). Whisper's weights are never changed.
+patient). In the study Whisper's weights are never changed; fine-tuning is only in the exploratory
+findings 9 and 10.
 
 ## How it works
 
@@ -121,8 +141,9 @@ transcribe. *Turns* are single utterances from one speaker's channel, a control 
 but short and single-speaker, like the Eka clips.
 
 The full design, every definition, and the two amendments recorded before any PriMock57 transcript
-was scored are in **[docs/PROTOCOL.md](docs/PROTOCOL.md)**. Data handling is in
-[docs/DATA.md](docs/DATA.md).
+was scored are in **[docs/PROTOCOL.md](docs/PROTOCOL.md)**. The exploratory work done after the
+confirmatory results (word-level verifier, clinical error weights, LoRA fine-tuning) is its Amendment 7.
+Data handling is in [docs/DATA.md](docs/DATA.md).
 
 ## Reproducing the results
 
@@ -183,7 +204,9 @@ fine-tuned with LoRA, plus the verifier), replayed from its saved results becaus
 model changed, words the verifier wants a human to hear, and possibly missing words are marked. *Review*
 walks a human through the flagged spots, riskiest first, plays each clip, takes "sounds right" or a typed
 fix, reveals the human transcript, and ends with errors caught against seconds listened and a corrected
-transcript to download. The detailed tool (review curves, policies, uploads) is at `/studio/` and the
+transcript to download. A separate page, `/results.html` ("Our results"), shows the final system's overall
+numbers in plain words and charts: how accurate the transcript is, how well the verifier spots mistakes,
+and how much listening it saves, against where we started (whisper-small). The detailed tool (review curves, policies, uploads) is at `/studio/` and the
 original console at `/classic/`.
 
 ```bash
