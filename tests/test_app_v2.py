@@ -21,15 +21,15 @@ CID = "day1_consultation01"
 
 
 class FakeVerifier:
-    def list_consultations(self):
+    def list_consultations(self, model="small"):
         return [{"id": CID, "split": "test", "duration": 457.9, "n_turns": 2, "n_windows": 1, "has_audio": True}]
 
-    def consultation_payload(self, consultation, unit="turn"):
+    def consultation_payload(self, consultation, unit="turn", model="small"):
         if consultation != CID:
             raise KeyError(consultation)
         return {"id": consultation, "split": "test", "duration": 457.9, "unit": unit, "units": []}
 
-    def review_curves(self):
+    def review_curves(self, model="small"):
         return {"turn": {"x_seconds": [0, 5]}, "window": {"x_seconds": [0, 5]}, "meta": {}}
 
 
@@ -45,6 +45,7 @@ def events(text: str) -> list[tuple[str, dict]]:
 @pytest.fixture
 def client(monkeypatch):
     monkeypatch.setattr(server, "_verifier", lambda: FakeVerifier())
+    monkeypatch.setattr(server, "_available", lambda m: m == "small")
     return TestClient(server.app)
 
 
@@ -74,6 +75,18 @@ def test_untrained_verifier_is_a_clear_503(client, monkeypatch):
     for path in ("/api/v2/curves", f"/api/v2/consultation/{CID}"):
         r = client.get(path)
         assert r.status_code == 503 and "asrshift verifier" in r.json()["detail"]
+
+
+def test_models(client, monkeypatch):
+    r = client.get("/api/v2/models").json()
+    assert r["default"] == "small" and r["live"] == "small"
+    assert {m["id"]: m["available"] for m in r["models"]} == {"turbo-lora-mixed": False, "small": True}
+    assert client.get(f"/api/v2/consultation/{CID}").json()["model"] == "small"
+    assert client.get("/api/v2/curves", params={"model": "turbo-lora-mixed"}).status_code == 503
+    assert client.get("/api/v2/curves", params={"model": "large-v2"}).status_code == 422
+    monkeypatch.setattr(server, "_available", lambda m: True)   # the fine-tuned model's results present
+    assert client.get("/api/v2/models").json()["default"] == "turbo-lora-mixed"
+    assert client.get(f"/api/v2/consultation/{CID}").json()["model"] == "turbo-lora-mixed"
 
 
 def test_curves(client):
@@ -125,6 +138,15 @@ def test_live_streams_turns_in_time_order(client, monkeypatch):
     assert [t["role"] for t in turns] == ["doctor", "patient"]
     assert turns[0]["words"][0]["t0"] == 1.0 and ev[3][1]["decoded_until"] == 6.0
     assert seen == [(1.0, True), (4.0, True)]
+
+
+def test_new_live_run_cancels_older_ones(client, monkeypatch):
+    started = []
+    monkeypatch.setattr(server, "_run_live", lambda job, cid, second: (started.append(job), job.put("done", {})))
+    client.get(f"/api/v2/live/{CID}")
+    client.get(f"/api/v2/live/{CID}")
+    assert len(started) == 2 and started[0].cancelled.is_set() and not started[1].cancelled.is_set()
+    assert server._live_jobs == [started[1]]
 
 
 def test_live_reports_missing_consultation(client, monkeypatch):

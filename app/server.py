@@ -320,6 +320,28 @@ def _verifier():
     return verifier
 
 
+# saved transcripts the Review and Compare views can show; live decoding always runs whisper-small
+TRANSCRIPT_MODELS = {
+    "turbo-lora-mixed": "large-v3-turbo fine-tuned (LoRA, PriMock57 + Eka)",
+    "small": "whisper-small",
+}
+
+
+def _available(name: str) -> bool:
+    return (RESULTS_DIR / "units" / f"units_{name}.csv.gz").exists() and         (RESULTS_DIR / "models" / f"verifier_{name}.joblib").exists()
+
+
+def _transcript_model(model: str | None) -> str:
+    """The requested saved-transcript model, or the best one with results on disk."""
+    if model is None:
+        return next((m for m in TRANSCRIPT_MODELS if _available(m)), "small")
+    if model not in TRANSCRIPT_MODELS:
+        raise HTTPException(422, f"model must be one of {sorted(TRANSCRIPT_MODELS)}")
+    if not _available(model):
+        raise HTTPException(503, f"no results for {model}; see experiments/lora_pilot/README.md")
+    return model
+
+
 def _consultation(consultation_id: str) -> str:
     if not CONSULTATION_ID.match(consultation_id):
         raise HTTPException(404, "unknown consultation")
@@ -334,18 +356,26 @@ def committed_turns() -> pd.DataFrame:
     return d[(d["dataset"] == "primock57") & d["subset"].str.startswith("turn")].sort_values(["consultation", "start"])
 
 
+@app.get("/api/v2/models")
+def v2_models():
+    default = _transcript_model(None)
+    return {"default": default, "live": MODEL,
+            "models": [{"id": m, "label": label, "available": _available(m)} for m, label in TRANSCRIPT_MODELS.items()]}
+
+
 @app.get("/api/v2/consultations")
-def v2_consultations():
-    return _verifier().list_consultations()
+def v2_consultations(model: str | None = None):
+    return _verifier().list_consultations(model=_transcript_model(model))
 
 
 @app.get("/api/v2/consultation/{consultation_id}")
-def v2_consultation(consultation_id: str, unit: str = "turn"):
+def v2_consultation(consultation_id: str, unit: str = "turn", model: str | None = None):
     _consultation(consultation_id)
     if unit not in {"turn", "window"}:
         raise HTTPException(422, "unit must be turn or window")
+    model = _transcript_model(model)
     try:
-        return _verifier().consultation_payload(consultation_id, unit=unit)
+        return {**_verifier().consultation_payload(consultation_id, unit=unit, model=model), "model": model}
     except (KeyError, ValueError):
         raise HTTPException(404, "unknown consultation")
     except FileNotFoundError as e:
@@ -396,9 +426,9 @@ def _ranged_file(path: Path, request: Request, media_type: str) -> Response:
 
 
 @app.get("/api/v2/curves")
-def v2_curves():
+def v2_curves(model: str | None = None):
     try:
-        return _verifier().review_curves()
+        return _verifier().review_curves(model=_transcript_model(model))
     except FileNotFoundError as e:
         raise HTTPException(503, f"verifier not trained: {e}")
 
@@ -538,8 +568,19 @@ def v2_live(consultation_id: str, second: int = Query(0, ge=0, le=1)):
     """Decode the consultation turn by turn (each speaker's own channel) and stream the scored turns."""
     _consultation(consultation_id)
     job = _Job()
+    # A closed or reloaded page does not always cancel its run (the stream's cleanup only runs once the
+    # server next writes to it), and every run queues on the one Whisper model. One viewer, one live run:
+    # a new run cancels the older ones, so it never waits behind decodes nobody is watching.
+    with _live_lock:
+        for old in _live_jobs:
+            old.cancelled.set()
+        _live_jobs[:] = [job]
     threading.Thread(target=_run_live, args=(job, consultation_id, bool(second)), daemon=True).start()
     return _event_stream(job, cancel_on_disconnect=True)
+
+
+_live_lock = threading.Lock()
+_live_jobs: list[_Job] = []
 
 
 _jobs: dict[str, _Job] = {}
