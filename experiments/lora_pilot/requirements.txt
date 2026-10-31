@@ -1,0 +1,6 @@
+# LoRA pilot only (CPU). Install into the repo venv on top of requirements.txt.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.15.0+cpu
+transformers==4.46.3
+peft==0.13.2
+accelerate==1.1.1
