@@ -1,0 +1,2 @@
+# generated kernel folders (kernel.py embeds the scripts; push with `kaggle kernels push -p <folder>`)
+turbo_lora*/
