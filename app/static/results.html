@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Second Listen Results</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+  <link rel="stylesheet" href="simple.css">
+</head>
+<body>
+<main class="wrap">
+  <header class="top">
+    <h1>Second<span>Listen</span></h1>
+    <a class="toplink" href="./">← Back to the app</a>
+  </header>
+
+  <section class="rs-head">
+    <h2>What we achieved</h2>
+    <p>Our system writes down a doctor-patient conversation and points a person to the few words worth
+      double-checking. Every number below is measured on recordings it never trained on, against what was
+      really said (typed by people).</p>
+    <div class="seg" role="group" aria-label="Recordings" id="sets"></div>
+    <p class="rs-what" id="what"></p>
+  </section>
+
+  <div id="page"><p class="status">Loading results…</p></div>
+
+  <footer class="legend">
+    <small>Our system: Whisper large-v3-turbo fine-tuned on medical conversations and clips (LoRA), plus our
+      mistake spotter (the verifier). Where we started: off-the-shelf Whisper small plus the first verifier.
+      Exploratory results; details in docs/PROTOCOL.md, amendment 7.</small>
+  </footer>
+</main>
+<div class="tip" id="tip" role="tooltip" hidden></div>
+<script src="results.js"></script>
+</body>
+</html>

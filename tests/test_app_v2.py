@@ -89,6 +89,14 @@ def test_models(client, monkeypatch):
     assert client.get(f"/api/v2/consultation/{CID}").json()["model"] == "turbo-lora-mixed"
 
 
+def test_overview_served_from_results(client, monkeypatch, tmp_path):
+    monkeypatch.setattr(server, "OVERVIEW", tmp_path / "overview.json")
+    r = client.get("/api/v2/overview")
+    assert r.status_code == 503 and "overview.py" in r.json()["detail"]
+    (tmp_path / "overview.json").write_text('{"final": {"transcripts": {}}}')
+    assert client.get("/api/v2/overview").json() == {"final": {"transcripts": {}}}
+
+
 def test_curves(client):
     assert set(client.get("/api/v2/curves").json()) == {"turn", "window", "meta"}
 

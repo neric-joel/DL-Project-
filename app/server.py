@@ -433,6 +433,19 @@ def v2_curves(model: str | None = None):
         raise HTTPException(503, f"verifier not trained: {e}")
 
 
+OVERVIEW = RESULTS_DIR / "tables" / "turbo-lora-mixed" / "overview.json"
+
+
+@app.get("/api/v2/overview")
+def v2_overview():
+    """Overall metrics of the final system and the starting point, for the results page
+    (written by experiments/lora_pilot/analysis/overview.py)."""
+    if not OVERVIEW.exists():
+        raise HTTPException(503, "results/tables/turbo-lora-mixed/overview.json missing; run "
+                                 "experiments/lora_pilot/analysis/overview.py")
+    return json.loads(OVERVIEW.read_text())
+
+
 def _sse(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 

@@ -246,12 +246,16 @@
     mode = m;
     $$("#mode button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === m)));
     $("#review").hidden = m !== "review";
-    $("#cols").hidden = m === "review";
-    $("#srcseg").hidden = m === "review";
-    if (m === "review") { audio.pause(); closeStream(); status(""); renderReview(true); }
+    $("#cols").hidden = m !== "watch";
+    $("#srcseg").hidden = m !== "watch";
+    $(".legend").hidden = m !== "watch";
+    if (m !== "watch") { audio.pause(); closeStream(); status(""); }
+    if (m === "review") renderReview(true);
     else if (C) status(src === "live" ? "Press play: Whisper transcribes the audio as it plays." : "Press play.");
   }
-  $$("#mode button").forEach((b) => b.addEventListener("click", () => { if (C && b.dataset.mode !== mode) setMode(b.dataset.mode); }));
+  $$("#mode button").forEach((b) => b.addEventListener("click", () => {
+    if (b.dataset.mode !== mode && C) setMode(b.dataset.mode);
+  }));
 
   function clip(sp) {
     const a = Math.max(sp.row.start, sp.t0 - PAD), b = Math.min(sp.row.end, sp.t1 + PAD);
