@@ -301,7 +301,7 @@ Inference on PriMock57 was running, but no PriMock57 transcript had been scored 
 entity recognition tool, and check a sample by hand") is implemented as follows. Every medical entity
 annotated in Eka is normalised; pure numbers and doses, and single words that are usually not clinical
 in conversation ("back", "rest", ...), are removed. The terms that also occur in PriMock57 reference
-transcripts form the lexicon (270 terms, 2,468 occurrences). The same greedy longest-match matcher is
+transcripts form the lexicon (270 terms, 2,464 occurrences). The same greedy longest-match matcher is
 run on the references of *both* datasets. A term is correct if all its words are aligned as correct.
 This gives term accuracy on an identical vocabulary in both domains, with no brand names. The
 lexicon uses only human annotations and reference text, never ASR output or labels. It is committed
