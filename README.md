@@ -42,9 +42,9 @@ numbers, doses and negations separately.
 
 ## What we built next (exploratory)
 
-These came after the main study ([protocol, amendment 7](docs/PROTOCOL.md)). Nothing was trained on the
-test recordings, but the versions we kept were picked after comparing on them, so treat the numbers as
-slightly optimistic.
+These came after the main study ([protocol, amendment 7](docs/PROTOCOL.md)) and are **exploratory**.
+Nothing was trained on the test recordings, but the final system was selected after comparing versions
+on the test results, so treat its numbers as slightly optimistic.
 
 - **A mistake spotter (the verifier).** Instead of whole transcripts, it flags single words that are
   probably wrong and places where words were probably dropped, so a person listens to short clips.
@@ -53,13 +53,21 @@ slightly optimistic.
   *and* the Eka training clips. Fine-tuning on conversations alone made it worse on Eka; adding both
   fixed that.
 
-| 47 test consultations, 30-second pieces | Where we started (Whisper small) | Our system |
-|---|---:|---:|
-| Words wrong, per 100 | 11.6 | **7.5** |
-| Words skipped, per 100 | 6.5 | **4.0** |
-| Serious mistakes left after a person listens for 30 s (per consultation) | 5.2 | **4.0** |
-| Serious mistakes caught by checking the riskiest 10% of words | 77% | **86%** |
-| Words wrong per 100 on Eka clips | 13.7 | **8.3** |
+**Words wrong per 100, step by step** (47 test consultations, 30-second pieces): Whisper small **11.6**
+→ Whisper large-v3-turbo off the shelf **9.9** → our fine-tuned turbo **7.5**.
+
+| 47 test consultations, 30-second pieces | Whisper small (where we started) | Whisper turbo, off the shelf | Our system |
+|---|---:|---:|---:|
+| Words wrong, per 100 | 11.6 | 9.9 | **7.5** |
+| Words skipped, per 100 | 6.5 | 6.2 | **4.0** |
+| Words wrong per 100 on Eka clips | 13.7 | 10.1 | **8.3** |
+| Serious mistakes in the written words caught by checking the riskiest 10% of words¹ | 77% | – | **86%** |
+| Serious mistakes left after a person listens for 30 s, per consultation² | 5.1 | – | **4.0** |
+
+¹ Covers wrong words that are in the transcript. Words that were dropped are found by a separate
+part of the verifier and measured separately.
+² Estimated, not timed with real reviewers: each flagged word costs its audio clip plus 0.6 s either
+side, and the starting point is Whisper small with the first version of the verifier.
 
 Details, and the ideas that did not work: [experiments/lora_pilot/README.md](experiments/lora_pilot/README.md).
 
@@ -70,8 +78,9 @@ pip install -r requirements-app.txt
 uvicorn app.server:app --port 8765        # then open http://127.0.0.1:8765
 ```
 
-- **Watch:** a consultation plays with Whisper (transcribing live) and our system side by side, with
-  the words to double-check marked.
+- **Watch:** a consultation plays with Whisper small (transcribed **live** on your computer) and our
+  system (**pre-generated** on a GPU, replayed in time with the audio) side by side, with the words to
+  double-check marked.
 - **Review:** go through the flagged words one by one, hear each clip, confirm or fix it, and see your
   score.
 - **Our results** (`/results.html`): the overall numbers in plain words and charts.
