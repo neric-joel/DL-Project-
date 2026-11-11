@@ -171,6 +171,7 @@
   function setSource(s, keepStatus) {
     src = s;
     $$(".seg button[data-src]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.src === s)));
+    $("#tag-w").textContent = s === "live" ? "live" : "saved transcript";
     if (!C) return;
     closeStream();
     for (const r of C.rows) { r.whisper = s === "saved" ? r.saved : null; fillRow(r); }

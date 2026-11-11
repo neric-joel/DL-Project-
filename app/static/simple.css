@@ -51,6 +51,8 @@ select option { background: var(--black); color: var(--lime); }
 .colhead.ours { color: var(--lime); }
 .colhead h2 { margin: 0; font-size: 20px; font-weight: 700; }
 .colhead p { margin: 0; grid-column: 1; font-size: 13px; opacity: .8; }
+.tag { display: inline-block; border: 1px solid currentColor; border-radius: 999px; padding: 0 8px;
+       font: 600 11px/1.6 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
 .colhead .stat { grid-row: 1 / span 2; grid-column: 2; font-size: 13px; text-align: right; font-weight: 600; }
 .rows { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; column-gap: 28px; }
 
@@ -150,6 +152,10 @@ kbd { font: 600 11px var(--mono); border: 1px solid currentColor; border-radius:
 .keyline .kb { background: var(--lime); }
 .keyline .ka { border: 2px solid var(--cobalt); margin-left: 10px; }
 .keyline .ko { border: 2px solid var(--cobalt); border-radius: 3px; margin-left: 10px; }
+.rs-steps { margin: 14px 0 0; font-size: 14px; color: var(--cobalt); }
+.rs-steps b { color: var(--lime); font-size: 18px; }
+.rs-steps b.a { color: var(--cobalt); }
+.rs-note { margin: 10px 0 0; font-size: 13px; color: var(--cobalt); }
 .rs-table td.mean { text-align: left; color: var(--cobalt); font-size: 12px; }
 .rs-table tbody th { font-weight: 500; }
 .rs-head h3 { margin: 0; font-size: 30px; letter-spacing: -.01em; }

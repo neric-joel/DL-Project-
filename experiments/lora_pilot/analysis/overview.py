@@ -1,5 +1,5 @@
 """Overall metrics of the final system (large-v3-turbo + mixed LoRA, pooled verifier) for the results page,
-with the starting point (whisper-small + its verifier) beside it.
+with the starting point (whisper-small + its verifier) and off-the-shelf large-v3-turbo beside it.
 
 usage (repo root, repo venv): python experiments/lora_pilot/analysis/overview.py
 writes results/tables/turbo-lora-mixed/overview.json
@@ -97,8 +97,8 @@ def listening() -> dict:
             d["x_seconds"] = c["x_seconds"]
             for e in ("weighted", "critical"):
                 tot = meta[f"{e}_errors"] / n
-                d.setdefault(e, {})[f"{name}_flags"] = [round(v * tot, 2) for v in c[key][e][meth]]
-                d[e][f"{name}_whole"] = [round(v * tot, 2) for v in c[key][e]["window_review"]]
+                d.setdefault(e, {})[f"{name}_flags"] = [round(v * tot, 3) for v in c[key][e][meth]]   # 3 dp: the page rounds once
+                d[e][f"{name}_whole"] = [round(v * tot, 3) for v in c[key][e]["window_review"]]
         out[key] = d
     return out
 
@@ -106,6 +106,7 @@ def listening() -> dict:
 def main():
     res = {"final": {"transcripts": transcripts(FINAL), "detection": detection(FINAL)},
            "start": {"transcripts": transcripts(START), "detection": detection(START)},
+           "turbo": {"transcripts": transcripts(SECOND)},   # off-the-shelf large-v3-turbo, for the WER steps
            "listening": listening(),
            "meta": {"final": "whisper-large-v3-turbo + LoRA (PriMock57 training consultations + Eka calibration), pooled verifier",
                     "start": "whisper-small + its verifier", "flag_share": 0.10}}

@@ -141,6 +141,8 @@
           { label: "Serious words wrong, %", a: T0.critical_error_rate, b: T.critical_error_rate, unit: "%" },
           { label: "Words skipped, per 100", a: T0.deletions, b: T.deletions, unit: "" },
         ])}
+        ${d.turbo ? `<p class="rs-steps mono">Words wrong per 100: Whisper small <b class="a">${r1(T0.wer)}</b> → Whisper turbo, off the shelf
+          <b class="a">${r1(d.turbo.transcripts[st.set].wer)}</b> → our fine-tuned turbo <b>${r1(T.wer)}</b></p>` : ""}
         <p class="rs-line"><b>${Math.round(100 * (1 - T.wer / T0.wer))}% fewer mistakes</b> than where we started.
           Most of the gain is words the old model skipped: ${r1(T0.deletions)} per 100 then, ${r1(T.deletions)} now.</p>
         <p class="rs-caveat">Still to fix: ${r1(100 - T.numbers.precision)} in 100 numbers our model writes are wrong or were never said
@@ -148,15 +150,17 @@
       </section>
 
       <section class="rs-card"><h3>2 · How well we spot the mistakes</h3>
-        <p class="rs-sub">Only ${r1(D.wrong_word_rate)}% of words are wrong, so finding them is the hard part. If a person checks just the
+        <p class="rs-sub">Only ${r1(D.wrong_word_rate)}% of the written words are wrong, so finding them is the hard part. If a person checks just the
           <b>10% riskiest words</b> we flag:</p>
         <div class="tiles">
-          <div class="tile"><b class="mono">${r1(D.words.top10.recall)}%</b><span>of all wrong words are among them</span></div>
-          <div class="tile"><b class="mono">${r1(D.words.top10.critical_recall)}%</b><span>of the serious mistakes are among them</span></div>
+          <div class="tile"><b class="mono">${r1(D.words.top10.recall)}%</b><span>of the wrong words in the transcript are among them</span></div>
+          <div class="tile"><b class="mono">${r1(D.words.top10.critical_recall)}%</b><span>of the serious mistakes in the written words are among them</span></div>
           <div class="tile"><b class="mono">1 in ${oneIn}</b><span>flags is a real mistake<br>(random picking: 1 in ${Math.round(100 / D.wrong_word_rate)})</span></div>
           <div class="tile"><b class="mono">${D.words.auroc.toFixed(2)}</b><span>ranking score (1.0 = perfect, 0.5 = guessing)</span></div>
         </div>
         <h4>Our flags against Whisper's own confidence</h4>
+        <p class="rs-note">These numbers cover words that are in the transcript. Words that were dropped are found by a
+          separate part of the verifier and measured on their own.</p>
         ${pairBars([
           { label: "Wrong words found", a: D.words.top10.recall, b: D.whisper_confidence.top10.recall },
           { label: "Serious mistakes found", a: D.words.top10.critical_recall, b: D.whisper_confidence.top10.critical_recall },
@@ -166,7 +170,8 @@
 
       <section class="rs-card"><h3>3 · How much listening it saves</h3>
         ${s.unit ? `<p class="rs-sub">A person checks a consultation (about 9 minutes of audio) by listening. Lower line = fewer mistakes left
-          after the same listening time.</p>${listenChart(s.unit)}`
+          after the same listening time. <b>Estimated</b>, not timed with real reviewers: each flagged word costs its audio clip
+          plus 0.6 s either side.</p>${listenChart(s.unit)}`
           : `<p class="rs-sub">Not measured for these clips: each is only a few seconds long. Pick Conversations or One speaker.</p>`}
       </section>
 
