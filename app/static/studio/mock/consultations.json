@@ -1,0 +1,10 @@
+[
+ {
+  "id": "day1_consultation01",
+  "split": "test",
+  "duration": 456.99,
+  "n_turns": 101,
+  "n_windows": null,
+  "has_audio": true
+ }
+]

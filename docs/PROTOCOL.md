@@ -385,3 +385,111 @@ We therefore do **not** count H3b as a confirmatory finding. We report it as uns
 a deployment lesson about tuning thresholds on a few consultations. The large change in the number
 false-alarm rate on PriMock57 (16% → 6%) shows that the earlier gap between domains was an artifact of
 "oh" → "0", not an ASR behaviour.
+
+### Amendment 7: 2026-10-30, *after* all confirmatory results (exploratory extensions)
+
+Everything in this amendment is **exploratory**. It changes no unit, split, label, policy or test used for
+H1–H4, and none of their numbers. The study's own question (do review policies travel?) is answered
+above. This amendment asks the follow-up a deployment would ask next: whole-transcript review is
+expensive on conversations, so can a human be pointed at individual words instead, and can the
+transcripts themselves get better? Three additions: a word-level verifier, a clinical weighting of
+errors, and LoRA fine-tuning of Whisper. The code is in `src/asrshift/verifier.py` and
+`experiments/lora_pilot/`; the scripts behind every number below are in `experiments/lora_pilot/analysis/`.
+
+**Fixed before any of these results existed**
+
+1. **No test unit in any training.** Training, early stopping, hyperparameter search and every threshold
+   use only the training splits: Eka calibration and validation, and the 10 PriMock57 recalibration
+   consultations. The 47 PriMock57 test consultations and the Eka test split are used only for scoring.
+2. **Clinical weights** (`configs/default.yaml`, `verifier.weights`), written down before any verifier
+   or fine-tuning result: an error on a critical word (number, dose or negation, `score.is_critical`)
+   weighs 10, a medical term from the shared lexicon (Amendment 3) 5, another content word 1, a function
+   word or filler 0.2. **Weighted WER** is the weighted error count over the weighted reference length.
+   A sensitivity run with critical weights 5, 10 and 20 left the ranking of the review methods unchanged.
+3. **Review cost is seconds of listening.** A flagged word or gap costs the audio from 0.6 s before it to
+   0.6 s after it (`clip_pad_s`), overlapping clips in one unit are charged once, and reviewing a whole
+   unit costs its duration. The outcome is the share (or count) of weighted and of critical errors still
+   in a consultation after B seconds of listening, B = 0–300 s. CIs come from 1,000 bootstrap draws of
+   consultations (Eka: groups), seed 598.
+
+**What was added**
+
+4. **Verifier.** Two gradient-boosted Poisson regressors over the committed transcripts: one predicts the
+   weighted error each hypothesis word would fix, the other the weighted error of words missing in each
+   gap between words (more than half of PriMock57 window errors are deletions). Features: Whisper's word
+   probabilities, unit statistics, and agreement with a second transcript (large-v3-turbo's committed
+   output). Head hyperparameters were chosen by grouped 5-fold CV on the training splits. Three review
+   methods are compared: whole-unit review in confidence order (as the study's policies do), the
+   verifier's clips, and a hybrid that reviews a whole unit when its flags would cost more than the unit.
+5. **LoRA fine-tuning.** Rank 16 (alpha 32, dropout 0.05) on the attention projections. Training data are
+   the turns and windows (≤ 30 s) of 8 recalibration consultations; the other 2 (day5_consultation04 and
+   day5_consultation07) are the dev set for early stopping. Two models: a whisper-small pilot on CPU,
+   scored on 12 test consultations; and whisper-large-v3-turbo on a Kaggle T4 (fp16), merged to
+   CTranslate2 float16 and decoded with the study's settings, scored on all 47. Turbo was trained with 3
+   seeds. A **mixed** turbo adapter also trains on Eka calibration (6.0 h of audio in total), with 64 Eka
+   validation units added to the dev set.
+6. **Out-of-fold transcripts.** To score the recalibration consultations without in-sample errors, 4 more
+   mixed adapters each leave 2 of the 8 training consultations out and transcribe them.
+
+**Results** (47 PriMock57 test consultations unless stated)
+
+| | whisper-small | large-v3-turbo | turbo + LoRA, PriMock57 only | **turbo + LoRA, mixed** |
+|---|---:|---:|---:|---:|
+| WER, windows | 11.6% | 9.9% | **7.2%** | 7.5% |
+| Weighted WER, windows | 13.1% | 10.9% | **8.7%** | 9.2% |
+| Critical error rate, windows | 16.0% | 14.7% | **11.5%** | 12.2% |
+| WER, turns | 11.4% | 8.9% | **6.5%** | 6.9% |
+| WER / critical error rate, Eka test | 13.7% / 12.9% | 10.1% / 9.3% | 10.8% / 12.5% | **8.3% / 4.9%** |
+
+- **Fine-tuning on PriMock57 helps PriMock57.** Turbo + LoRA against turbo, windows: WER −2.71 pts
+  (CI [−3.21, −2.28]). The three seeds give 7.23%, 7.29% and 7.51%, and for each seed the CIs against turbo
+  exclude 0 for WER, weighted WER, critical errors and negation recall. Most of the gain is fewer dropped
+  words (deletion rate 6.2% → 3.6%).
+- **It does not travel.** The same adapter is *worse* than turbo on Eka (WER +0.74 pts, CI [+0.34, +1.22];
+  critical error rate +3.3 pts, CI [+1.2, +5.6]). This is the study's theme in the other direction:
+  adapting to one site's audio costs accuracy on another's.
+- **Training on both sites fixes it.** The mixed adapter beats turbo on every Eka metric (WER −1.8 pts, CI
+  [−3.3, −0.8]; critical error rate −4.4 pts, CI [−6.8, −1.6]) and on every PriMock57 metric, at a small
+  cost against the PriMock57-only adapter (windows WER +0.31 pts, CI [+0.12, +0.51]).
+- **Confidence still ranks errors after fine-tuning.** Word-probability AUROC for a wrong word is
+  0.81–0.86 for every model and set, so fine-tuning did not break the signals the policies read.
+- **The verifier saves listening.** whisper-small, windows, after 60 s per consultation: the verifier leaves
+  62% of weighted errors, whole-window review 88%, and playing Whisper's least confident words 91%. On
+  turns the hybrid is best (49% left, against 71% for whole-turn review).
+- **End to end.** Errors left per consultation after 30 s of listening, whisper-small + verifier → mixed
+  turbo LoRA + pooled verifier (item 9): windows 129 → 94 weighted and 5.1 → 4.0 critical; turns 123 → 79
+  weighted and 4.5 → 2.8 critical (hybrid).
+
+**Choices made after seeing test results.** Several alternatives were compared on the test consultations,
+and the ones we kept were chosen from those comparisons. The numbers for the kept systems are therefore
+optimistic, and small differences between them should not be read as findings. The large effects (WER
+against turbo; Eka with and without Eka training data) hold across seeds and are much larger than these
+choices could produce.
+
+7. The mixed adapter was trained *because* the PriMock57-only adapter was worse on the Eka test split.
+8. The verifier went through versions 2–4, compared on test curves. Version 4 found and removed a
+   word-frequency feature that leaked label information.
+9. Retraining the verifier on the fine-tuned model's own errors was tried twice and lost to the original
+   on test: once with the PriMock57-only model's transcripts (its 8 training consultations dropped as
+   in-sample), and once with the out-of-fold transcripts. About 2,000 training units were too few. The
+   kept **pooled** verifier trains on whisper-small's training transcripts and the mixed model's
+   held-out ones together (5,782 units). It is never worse than the original on test and helps most on
+   missing words (gap AUPRC: windows 0.161 → 0.181, turns 0.168 → 0.213).
+10. Tried and dropped, kept for the record: combining the fine-tuned and original transcripts word by word
+    (rule tuned on the 2 dev consultations; it helped the whisper-small pilot, WER 11.6% → 10.5% on its 12
+    consultations, but made fine-tuned turbo worse); moving critical words where the model and turbo
+    disagree to the front of the queue (only about a third of critical errors are such disagreements;
+    the rest are mistakes both models make); and two-channel speech-energy features in the verifier
+    (better only at 240 s, slightly worse at 30 s; kept behind `verifier.audio_features`, off by default).
+
+**Possible leaks, checked**
+
+11. Eka calibration trains the mixed adapter, so its transcripts of Eka calibration are in-sample. They
+    are never decoded or scored, and the pooled verifier does not train on them. The mixed adapter's dev
+    set holds 64 Eka validation units, which the pooled verifier later trains on; they only pick the
+    stopping step, but it is a mild reuse.
+12. In the app's results (`results/*turbo-lora-mixed*`), the 8 training consultations come from the
+    out-of-fold models, so no unit there is scored by a model that trained on it. The app still labels
+    those consultations "used in training".
+13. H1–H4 are about whisper-small and the four review policies. Nothing here refits those policies, so
+    the confirmatory results are untouched.

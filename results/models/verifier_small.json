@@ -1,0 +1,113 @@
+{
+  "model": "small",
+  "second": "large-v3-turbo",
+  "weights": {
+    "crit": 10.0,
+    "med": 5.0,
+    "cont": 1.0,
+    "func": 0.2
+  },
+  "train_units": 3724,
+  "train_words": 62700,
+  "train_gaps": 66424,
+  "hyperparameters": {
+    "shared": {
+      "max_iter": 400,
+      "learning_rate": 0.05,
+      "max_leaf_nodes": 31,
+      "l2_regularization": 1.0,
+      "early_stopping": true,
+      "validation_fraction": 0.15
+    },
+    "words": {
+      "max_iter": 800,
+      "learning_rate": 0.03,
+      "max_leaf_nodes": 31,
+      "min_samples_leaf": 100,
+      "l2_regularization": 0.0
+    },
+    "gaps": {
+      "max_iter": 400,
+      "learning_rate": 0.05,
+      "max_leaf_nodes": 15,
+      "min_samples_leaf": 20,
+      "l2_regularization": 10.0
+    }
+  },
+  "features": {
+    "words": [
+      "p",
+      "p_prev",
+      "p_next",
+      "own_w",
+      "pos",
+      "agree",
+      "agree_win",
+      "other_w",
+      "dis_run",
+      "extra_near",
+      "n_words",
+      "mean_logprob",
+      "word_p_mean",
+      "nsp_max",
+      "cr_max",
+      "n_segments",
+      "words_per_s",
+      "log_duration",
+      "kind",
+      "other_p"
+    ],
+    "gaps": [
+      "left_p",
+      "right_p",
+      "pos",
+      "edge",
+      "extra",
+      "extra_w",
+      "extra_crit",
+      "dis_near",
+      "n_words",
+      "mean_logprob",
+      "word_p_mean",
+      "nsp_max",
+      "cr_max",
+      "n_segments",
+      "words_per_s",
+      "log_duration",
+      "kind",
+      "extra_p"
+    ]
+  },
+  "curves": {
+    "window": {
+      "window_review": 0.8763,
+      "whisper_conf": 0.9099,
+      "verifier": 0.6237,
+      "hybrid": 0.6353,
+      "perfect": 0.146
+    },
+    "turn": {
+      "window_review": 0.7109,
+      "whisper_conf": 0.8845,
+      "verifier": 0.5454,
+      "hybrid": 0.4915,
+      "perfect": 0.1508
+    }
+  },
+  "curves_crossfit": {
+    "window": {
+      "window_review": 0.8763,
+      "whisper_conf": 0.9099,
+      "verifier": 0.6076,
+      "hybrid": 0.6305,
+      "perfect": 0.146
+    },
+    "turn": {
+      "window_review": 0.7109,
+      "whisper_conf": 0.8845,
+      "verifier": 0.5107,
+      "hybrid": 0.479,
+      "perfect": 0.1508
+    }
+  }
+}

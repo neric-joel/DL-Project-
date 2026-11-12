@@ -68,6 +68,19 @@ def _report(cfg, args):
     report.run(cfg, model=args.model)
 
 
+def _verifier(cfg, args):
+    from asrshift import verifier
+
+    model = args.model or cfg["asr"]["model"]
+    meta = verifier.train(model, cfg["verifier"]["second_model"], cfg, crossfit=args.crossfit)
+    print(f"verifier trained on {meta['train_units']} units ({meta['train_words']} words, {meta['train_gaps']} gaps); "
+          f"wrote {verifier.model_path(model)} and {verifier.curves_path(model)}")
+    for key, label in (("curves", ""), ("curves_crossfit", " (cross-fit)")):
+        for unit, row in meta.get(key, {}).items():
+            print(f"  {unit}s{label}, weighted errors left after 60 s per consultation: "
+                  + ", ".join(f"{k} {v:.1%}" for k, v in row.items()))
+
+
 def _download(cfg, args):
     from asrshift import download
 
@@ -75,7 +88,8 @@ def _download(cfg, args):
 
 
 STEPS = {"download": _download, "prepare": _prepare, "infer": _infer, "score": _score,
-         "evaluate": _evaluate, "figures": _figures, "report": _report, "terms": _terms}
+         "evaluate": _evaluate, "figures": _figures, "report": _report, "terms": _terms,
+         "verifier": _verifier}
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -92,6 +106,8 @@ def main(argv: list[str] | None = None) -> None:
                    help="infer: write to a separate output file, so two processes can split the work")
     p.add_argument("--no-audio", action="store_true", help="download: PriMock57 transcripts only")
     p.add_argument("--n-boot", type=int, default=None, help="evaluate: bootstrap replicates (default: config)")
+    p.add_argument("--crossfit", action="store_true",
+                   help="verifier: also write curves cross-fitted over the PriMock57 test consultations")
     args = p.parse_args(argv)
     cfg = load_config(args.config)
     steps = ["download", "prepare", "infer", "score", "evaluate", "figures", "report"] if args.step == "all" else [args.step]

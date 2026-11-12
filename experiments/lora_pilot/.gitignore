@@ -1,0 +1,7 @@
+# model weights and training state stay local (about 1.3 GB); transcripts, scores and the training log are kept
+out/*
+!out/hyp_base.csv
+!out/hyp_lora.csv
+!out/per_consultation_base_vs_lora.csv
+!out/train_log.json
+out_*.log
