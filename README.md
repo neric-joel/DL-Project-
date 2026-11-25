@@ -92,8 +92,8 @@ step 5; no GPU needed); everything else works from `results/`.
 
 Steps 1 to 4 need no GPU and no dataset download. They recompute the Whisper small study and the
 headline numbers of the exploratory system from what is committed in `results/`: the per-unit and
-per-word results, the trained verifiers and the listening curves. We checked them on a fresh clone
-(Python 3.12, Windows 11, CPU only); the times below are from that run.
+per-word results, the trained verifiers and the listening curves. We checked them on fresh clones with
+Python 3.12 on Windows 11 and on Linux (ASU's Sol cluster), CPU only; the times below are from those runs.
 
 **1. Set up** (about 1 minute). Needs **Python 3.12 or newer**: the pinned numpy and scipy require it.
 
@@ -145,9 +145,12 @@ match the committed ones. Check with:
 git -c core.safecrlf=false diff --stat results/
 ```
 
-It should list only `results/tables/small/err/unit_scores.csv.gz`: its gzip header carries a timestamp,
-and on Linux or macOS its rows also end in LF instead of the committed CRLF. Every other file is
-unchanged. The large-v3-turbo comparison (finding 6) is rebuilt the same way with
+Every table (`results/tables/small/**/*.csv`) and `results/SUMMARY.md` should be unchanged. On Windows,
+where the committed files were made, the command lists only `results/tables/small/err/unit_scores.csv.gz`,
+whose gzip header carries a timestamp. On Linux (we checked on ASU's Sol cluster) it also lists the
+figures, which render with different fonts, and `results/metrics/small.json`,
+`results/models/policies_small.json` and the `.gz`, whose fitted values differ only in the last digits
+(relative differences below 10⁻¹²). The large-v3-turbo comparison (finding 6) is rebuilt the same way with
 `asrshift --config configs/large-v3-turbo.yaml evaluate`, then `figures` and `report`.
 
 **4. Tests** (under a minute)
