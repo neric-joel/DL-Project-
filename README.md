@@ -85,23 +85,97 @@ uvicorn app.server:app --port 8765        # then open http://127.0.0.1:8765
   score.
 - **Our results** (`/results.html`): the overall numbers in plain words and charts.
 
-Playing audio needs the downloaded data (step 2 below); everything else works from `results/`.
+Playing audio needs the datasets (`asrshift download` and `asrshift prepare`, the first two stages of
+step 5; no GPU needed); everything else works from `results/`.
 
 ## Reproduce
 
+Steps 1 to 4 need no GPU and no dataset download. They recompute the Whisper small study and the
+headline numbers of the exploratory system from what is committed in `results/`: the per-unit and
+per-word results, the trained verifiers and the listening curves. We checked them on a fresh clone
+(Python 3.12, Windows 11, CPU only); the times below are from that run.
+
+**1. Set up** (about 1 minute). Needs **Python 3.12 or newer**: the pinned numpy and scipy require it.
+
 ```bash
-python -m venv .venv
+git clone https://github.com/neric-joel/DL-Project-.git
+cd DL-Project-
+python3.12 -m venv .venv                  # Windows: py -3.12 -m venv .venv
 source .venv/bin/activate                 # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r requirements.txt           # the exact versions behind the reported numbers
 pip install --no-deps -e .
-asrshift evaluate && asrshift figures && asrshift report      # 1. from the saved results, minutes, no GPU
-asrshift all                                                  # 2. everything from raw audio, ~1 h on a GPU
-pytest                                                        # tests
 ```
 
-Also runs on [Google Colab](notebooks/reproduce_colab.ipynb) and in Docker (`docker compose run --rm
-reproduce`). Route 1 gives the exact committed numbers; route 2 can differ slightly on other GPUs without
-changing any conclusion.
+**2. The key result** (about 4 minutes): the numbers behind the table in "What we built next".
+
+```bash
+python experiments/lora_pilot/analysis/overview.py    # rewrites results/tables/turbo-lora-mixed/overview.json
+python scripts/key_results.py                         # prints the numbers from that file
+```
+
+Expected output of `key_results.py`:
+
+```
+                                                       small   turbo    ours
+WER %, PriMock57 windows (47 test consultations)       11.60    9.94    7.53
+Words skipped per 100, PriMock57 windows                6.53    6.24    3.99
+WER %, Eka test                                        13.66   10.10    8.30
+Critical error rate %, Eka test                         12.9     9.3     4.9
+
+Critical wrong words in the transcript caught by flagging the riskiest 10% of words (windows):
+  small + its verifier 77.4%, ours 86.0% (ours ranked by the model's own word probability instead: 46.6%)
+Critical errors left per consultation after 30 s of listening (windows, estimated):
+  small + its verifier 5.1, ours 4.0
+```
+
+WER is words wrong per 100 reference words. "Critical" means numbers, doses and negations.
+
+**3. The original study (H1 to H4): its tables, figures and `results/SUMMARY.md`** (about 3 minutes)
+
+```bash
+asrshift evaluate
+asrshift figures
+asrshift report
+```
+
+Expected: the last line is `wrote` followed by the path of `results/SUMMARY.md`, and the rebuilt files
+match the committed ones. Check with:
+
+```bash
+git -c core.safecrlf=false diff --stat results/
+```
+
+It should list only `results/tables/small/err/unit_scores.csv.gz`: its gzip header carries a timestamp,
+and on Linux or macOS its rows also end in LF instead of the committed CRLF. Every other file is
+unchanged. The large-v3-turbo comparison (finding 6) is rebuilt the same way with
+`asrshift --config configs/large-v3-turbo.yaml evaluate`, then `figures` and `report`.
+
+**4. Tests** (under a minute)
+
+```bash
+pytest                                    # expected: 93 passed, 2 skipped
+pip install -r requirements-app.txt       # adds the app's tests
+pytest                                    # expected: 107 passed, 1 skipped
+```
+
+The remaining skipped test needs `asrshift download` and `asrshift prepare`.
+
+**5. Everything from raw audio** (optional; about 1 hour on a GPU, plus a 2.1 GB download)
+
+```bash
+pip install -r requirements-gpu.txt       # NVIDIA GPU on Windows or Linux; not needed on Colab
+asrshift all                              # download, prepare, infer, score, evaluate, figures, report
+```
+
+This overwrites the committed files in `results/`; `git checkout -- results/` restores them. Float16
+decoding is not bit-identical across GPU models. On a T4, 4% of the 11,195 transcripts came out
+differently from our RTX 3050 run; the estimates moved by at most 0.03 and every hypothesis decision
+stayed the same. Fine-tuning (Kaggle T4) and the scripts behind the exploratory numbers are in
+[experiments/lora_pilot/README.md](experiments/lora_pilot/README.md).
+
+[Google Colab](notebooks/reproduce_colab.ipynb) runs step 5 and a quicker step 3 (500 bootstrap
+replicates instead of 2,000, so intervals and p-values differ slightly). Docker runs step 3 and the tests
+with `docker compose run --rm reproduce`.
 
 ## What is where
 
