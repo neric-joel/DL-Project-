@@ -310,6 +310,12 @@ team. A small local LLM (qwen3.5:2b through Ollama) was tried first as the entit
 because on a test chunk it copied the prompt's examples and missed most findings. All term results are
 exploratory.
 
+*Note added 2026-11-24:* the precision check of the 100 sampled matches was annotated with AI
+assistance and reviewed by a team member (`results/terms/audit_sample.csv`). 95 of 100 matches are
+medical terms in context (the 5 that are not are everyday words such as "eat" and "talking"), and 78 of
+those 95 (82%) have the correct type; most type errors are body parts (ear, head, throat) labelled as
+clinical findings.
+
 ### Amendment 4: 2026-09-28, after inference finished and before any scoring of the full data
 
 An adversarial code review (four reviewers; each defect was reproduced by a second agent before it
