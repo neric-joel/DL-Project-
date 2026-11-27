@@ -176,6 +176,20 @@ differently from our RTX 3050 run; the estimates moved by at most 0.03 and every
 stayed the same. Fine-tuning (Kaggle T4) and the scripts behind the exploratory numbers are in
 [experiments/lora_pilot/README.md](experiments/lora_pilot/README.md).
 
+**6. Train the final model on Kaggle** (optional; about 30 minutes on a free Kaggle T4)
+
+The Kaggle notebook [dl-project-turbo-lora-mixed](https://www.kaggle.com/code/harshinibv/dl-project-turbo-lora-mixed)
+fine-tunes whisper-large-v3-turbo with the mixed LoRA adapter (PriMock57 training consultations plus Eka
+calibration, seed 598). It then decodes Eka validation and test and the PriMock57 recalibration and test
+consultations, as turns and as windows. To rerun it, click Copy & Edit, check under Settings that the
+accelerator is a T4 GPU and that internet is on (Kaggle asks for a verified phone number before it allows
+either), then click Save Version and choose Save & Run All. The notebook clones the
+`feature/second-listen-app` branch of this repository, so that branch has to stay. Its output,
+`out/mixed/units.jsonl`, holds the fine-tuned model's transcripts;
+[experiments/lora_pilot/README.md](experiments/lora_pilot/README.md) shows how they become the committed
+files that step 2 reads. GPU training is not guaranteed to repeat
+bit for bit, so a rerun's transcripts can differ slightly from the committed ones.
+
 [Google Colab](notebooks/reproduce_colab.ipynb) runs step 5 and a quicker step 3 (500 bootstrap
 replicates instead of 2,000, so intervals and p-values differ slightly). Docker runs step 3 and the tests
 with `docker compose run --rm reproduce`.
