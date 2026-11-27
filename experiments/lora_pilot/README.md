@@ -36,8 +36,8 @@ python experiments/lora_pilot/decode.py --compare base lora
 
 ## Result (2026-10-29)
 
-130 steps (about 0.5 epoch), 4 resumed runs (Claude Code stopped earlier runs when the laptop ran short
-of memory; `--resume` picked up from the last checkpoint each time). Dev loss: 1.174 before training,
+130 steps (about 0.5 epoch), 4 resumed runs (earlier runs stopped when the laptop ran short of memory;
+`--resume` picked up from the last checkpoint each time). Dev loss: 1.174 before training,
 0.607 at step 25, 0.533 at 50, 0.529 at 75, 0.513 at 100, **0.502 at 125** (the adapter used), 0.502 at
 130.
 
